@@ -1,10 +1,13 @@
 # ATLAS
 
-Autonomous Data Forensics and Causal Reasoning Engine. This milestone delivers the
-engineering foundation only: typed contracts, configuration/error conventions,
-FastAPI probes, quality tooling and local infrastructure. Investigation features
-are not implemented. See [architecture](docs/architecture.md), [decisions](DECISIONS.md)
-and [project state](PROJECT_STATE.md).
+Autonomous Data Forensics and Causal Reasoning Engine. Implemented milestones:
+engineering foundation and enterprise simulator/fault-injection engine. The simulator
+provides 30 related tables, deterministic business data, executable pipelines, six faults,
+three benchmarks and Kafka telemetry with replay/deduplication. Investigation agents,
+RAG and MCP business tools remain unimplemented.
+
+See [simulator setup and examples](docs/simulator.md), [architecture](docs/architecture.md),
+[decisions](DECISIONS.md) and [project state](PROJECT_STATE.md).
 
 Requires Python 3.12, uv, Make and a running Docker daemon with Compose.
 
@@ -38,3 +41,14 @@ make infra-down
 `infra-down` preserves named volumes. Changing PostgreSQL/Neo4j passwords in .env
 will not rotate credentials already persisted in those volumes. Swagger is at
 http://127.0.0.1:8000/docs. This foundation is not production deployable.
+
+Initialize the dedicated simulator after infrastructure starts:
+
+```sh
+make sim-bootstrap
+make sim-migrate
+make sim-generate
+uv run --locked atlas-sim scenario evaluation/scenarios/a_missing_partitions.json
+make sim-reset
+make sim-integration
+```

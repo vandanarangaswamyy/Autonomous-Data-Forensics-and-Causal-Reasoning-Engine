@@ -1,0 +1,27 @@
+{
+  "name": "Revenue decline from omitted payment partitions",
+  "config": {
+    "seed": 42,
+    "start": "2025-11-01",
+    "days": 28,
+    "customers": 80,
+    "orders_per_day": 18
+  },
+  "fault": {
+    "kind": "missing_partitions",
+    "day": "2025-11-18",
+    "duration_days": 3
+  },
+  "metric": "revenue_usd",
+  "direction": "decrease",
+  "affected_datasets": [
+    "payment_events",
+    "staged_payments",
+    "daily_financials"
+  ],
+  "expected_evidence": [
+    "Gaps in payment event partition dates",
+    "Ingestion input/output row decline",
+    "Payments still exist in source ledger"
+  ]
+}

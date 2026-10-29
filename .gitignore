@@ -12,3 +12,6 @@ dist/
 build/
 node_modules/
 .next/
+
+.atlas-private/
+*.sqlite

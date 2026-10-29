@@ -1,7 +1,7 @@
 # Architecture
 
-Foundation status: FastAPI probes, contracts, configuration and error handling only.
-Reserved directories explicitly identify unimplemented scope.
+Current status: FastAPI foundation plus the enterprise simulator and fault-injection engine.
+See [simulator architecture and runbook](simulator.md). Other reserved boundaries remain unimplemented.
 
 One uv-managed Python distribution packages atlas_api, atlas_core and atlas_contracts
 from explicit source roots. Avoid independently versioned internal packages until
@@ -14,7 +14,7 @@ The API and future Celery workers justify separate processes for distinct failur
 concurrency and scaling behavior. Other services remain independently testable modules
 until operational needs justify deployment separation. services/documents is added to
 the requested layout for explicit document ingestion/NLP ownership. Frontend, Kubernetes,
-evaluation and remaining services have documentation only, no runnable implementation.
+remaining services have documentation only. The simulator and evaluator now run as operator CLI modules.
 
 PostgreSQL will own investigations, hypotheses, evidence metadata, tool audits and
 durable checkpoints; pgvector plus keyword indexing will support hybrid retrieval.
@@ -52,12 +52,19 @@ Authentication/authorization is a prerequisite for future enterprise APIs.
 
 Compose is local development infrastructure with persistent named volumes, loopback
 ports and health checks. PostgreSQL defaults to host port 55432 to avoid an existing
-5432 listener. Kafka exposes localhost:9092 for host clients and kafka:29092 for
+5432 listener. Kafka exposes 127.0.0.1:9092 for host clients and kafka:29092 for
 containers. Host ports are configurable. Redis/Kafka plaintext access, single-node
 operation and unbounded resource allocation are development choices. Production needs
 TLS, HA, backups, resource sizing and reviewed image digests. pgvector is available
-in the image; extension activation requires a future migration. No migrations exist.
-Unused AI/storage dependencies are deferred until their first implementation.
+in the image; extension activation requires a future migration. Alembic now owns the simulator schema in a dedicated PostgreSQL database; the API remains storage-free.
+Unused AI dependencies are deferred until their first implementation.
 
 References: [uv project management](https://docs.astral.sh/uv/guides/projects/) and
 [Apache Kafka Compose example](https://github.com/apache/kafka/blob/trunk/docker/examples/docker-compose-files/single-node/plaintext/docker-compose.yml).
+
+Simulator implementation uses SQLAlchemy Core (2.0) with portable tables and storage-free
+generation/configuration. The local observer database role receives SELECT grants on
+business/metadata evidence only. Oracle files stay in a separate evaluator directory,
+never database tables or public events. The evaluator must not share its identity or
+private mount with future agents. Outbox/inbox transactions provide replay-safe Kafka
+observations. These operator mutations are not agent diagnostic tools.

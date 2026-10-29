@@ -1,0 +1,27 @@
+{
+  "name": "Churn spike from regional join",
+  "config": {
+    "seed": 42,
+    "start": "2025-11-01",
+    "days": 28,
+    "customers": 80,
+    "orders_per_day": 18
+  },
+  "fault": {
+    "kind": "incorrect_join",
+    "day": "2025-11-01",
+    "duration_days": 28
+  },
+  "metric": "churned",
+  "direction": "increase",
+  "affected_datasets": [
+    "pipelines",
+    "column_lineage",
+    "churn_metrics"
+  ],
+  "expected_evidence": [
+    "Changed churn transformation definition",
+    "Many subscriptions associated with one cancellation",
+    "Source cancellation events unchanged"
+  ]
+}

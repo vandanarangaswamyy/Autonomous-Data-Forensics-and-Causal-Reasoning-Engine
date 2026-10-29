@@ -1,0 +1,285 @@
+{
+  "$defs": {
+    "PipelineEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "run_id": {
+          "format": "uuid",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "pipeline.execution",
+          "default": "pipeline.execution",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "pipeline_id": {
+          "title": "Pipeline Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "degraded",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "input_rows": {
+          "minimum": 0,
+          "title": "Input Rows",
+          "type": "integer"
+        },
+        "output_rows": {
+          "minimum": 0,
+          "title": "Output Rows",
+          "type": "integer"
+        },
+        "quality": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Quality",
+          "type": "object"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "occurred_at",
+        "pipeline_id",
+        "status",
+        "input_rows",
+        "output_rows",
+        "quality"
+      ],
+      "title": "PipelineEvent",
+      "type": "object"
+    },
+    "QualityEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "run_id": {
+          "format": "uuid",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "quality.alert",
+          "default": "quality.alert",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "dataset": {
+          "title": "Dataset",
+          "type": "string"
+        },
+        "check": {
+          "title": "Check",
+          "type": "string"
+        },
+        "observed": {
+          "title": "Observed",
+          "type": "number"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "occurred_at",
+        "dataset",
+        "check",
+        "observed",
+        "threshold"
+      ],
+      "title": "QualityEvent",
+      "type": "object"
+    },
+    "SchemaEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "run_id": {
+          "format": "uuid",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "schema.change",
+          "default": "schema.change",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "dataset": {
+          "title": "Dataset",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "occurred_at",
+        "dataset",
+        "version",
+        "fields"
+      ],
+      "title": "SchemaEvent",
+      "type": "object"
+    },
+    "TelemetryEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "run_id": {
+          "format": "uuid",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "operational.telemetry",
+          "default": "operational.telemetry",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "component": {
+          "title": "Component",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "measurements": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Measurements",
+          "type": "object"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "occurred_at",
+        "component",
+        "code",
+        "severity",
+        "measurements"
+      ],
+      "title": "TelemetryEvent",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "operational.telemetry": "#/$defs/TelemetryEvent",
+      "pipeline.execution": "#/$defs/PipelineEvent",
+      "quality.alert": "#/$defs/QualityEvent",
+      "schema.change": "#/$defs/SchemaEvent"
+    },
+    "propertyName": "event_type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/PipelineEvent"
+    },
+    {
+      "$ref": "#/$defs/SchemaEvent"
+    },
+    {
+      "$ref": "#/$defs/QualityEvent"
+    },
+    {
+      "$ref": "#/$defs/TelemetryEvent"
+    }
+  ]
+}

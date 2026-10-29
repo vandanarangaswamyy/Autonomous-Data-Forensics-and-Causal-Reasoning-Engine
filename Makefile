@@ -23,3 +23,16 @@ infra-down:
 	$(COMPOSE) down
 compose-validate:
 	$(COMPOSE) config --quiet
+
+.PHONY: sim-bootstrap sim-migrate sim-generate sim-reset sim-integration
+sim-bootstrap:
+	$(UV) run --locked python scripts/bootstrap_simulator.py
+sim-migrate:
+	$(UV) run --locked alembic upgrade head
+	$(UV) run --locked python scripts/bootstrap_simulator.py --grant-reader
+sim-generate:
+	$(UV) run --locked atlas-sim generate --profile small --seed 42
+sim-reset:
+	$(UV) run --locked atlas-sim reset
+sim-integration:
+	$(UV) run --locked python scripts/test_simulator_integration.py

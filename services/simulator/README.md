@@ -1,3 +1,5 @@
-# Deterministic enterprise data simulation and fault injection
+# Enterprise simulator
 
-Reserved boundary. No implementation or runtime exists in this foundation.
+Implemented: deterministic generation, executable SQL pipelines, six fault mutations,
+operator CLI and Kafka outbox/inbox. See [the runbook](../../docs/simulator.md).
+Ground-truth coordination lives separately in evaluation/src/atlas_evaluation.

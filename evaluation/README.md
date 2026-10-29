@@ -1,3 +1,7 @@
-# Reproducible fault scenarios, root-cause scoring and RAGAS
+# Simulator benchmarks
 
-Reserved boundary. No implementation or runtime exists in this foundation.
+Three reproducible scenario definitions and six configurable fault examples accompany
+the evaluator-only private registry in src/atlas_evaluation. See docs/simulator.md.
+Do not provide scenario definitions, operator commands or private oracle files to agents.
+This milestone verifies simulator ground truth and symptoms; agent scoring and RAGAS
+integration remain unimplemented.

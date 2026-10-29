@@ -23,3 +23,14 @@ business tools without explicit instruction. Reserved directories are not featur
   service startup separately from syntax validation. Never claim unrun checks passed.
 - Add meaningful unit, integration, contract and fault tests at the relevant layer.
 - Update PROJECT_STATE.md and DECISIONS.md with delivered scope and limitations.
+
+Simulator-specific rules:
+- Read docs/simulator.md before changing fixture generation or fault behavior.
+- Never expose evaluator files, scenario definitions, mutation CLI or oracle labels to
+  investigation tools. Use observer credentials and omit evaluator mounts in future runtimes.
+- Use a dedicated fixture database; never reset control-plane or enterprise source data.
+- Preserve deterministic generation/reset/replay and public event versioning/idempotency.
+- Run `make sim-integration` for simulator/storage/streaming changes with live services;
+  default integration skips are not evidence that PostgreSQL or Kafka was tested.
+- Record generator algorithm/configuration changes; do not silently reuse old benchmark
+  truth after changing fixture semantics. One private directory/operator writer per DB.

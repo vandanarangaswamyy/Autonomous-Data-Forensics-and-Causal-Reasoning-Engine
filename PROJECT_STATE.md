@@ -1,42 +1,100 @@
 # Project state
 
-## Completed: foundation
+## Completed milestones
 
-- Inspected workspace; created independent atlas Git repository, leaving unrelated projects untouched.
-- Python 3.12 uv project, committed-format lockfile, editable multi-source installation.
-- Ruff format/lint, strict mypy, pytest/pytest-asyncio, local pre-commit hooks and Make targets.
-- Minimal FastAPI factory, liveness/lifecycle readiness, typed settings and safe correlated errors.
-- Versioned Pydantic Investigation, Evidence, Hypothesis, ToolExecution and AgentState contracts.
-- Local Compose PostgreSQL/pgvector, Redis, Neo4j and KRaft Kafka with persistent volumes.
-- Secret-free environment template; ignored private .env generated for verification.
-- Architecture, decisions, engineering rules and complete file inventory.
+### Foundation
 
-## Verification
+Python 3.12 uv monorepo, FastAPI factory and probes, shared settings/errors and typed
+investigation contracts, Ruff/mypy/pytest/pre-commit, Make targets and local infrastructure.
+The API still has no business endpoints or external-storage dependency.
+Foundation was pushed to main as 2d41cc0. The simulator milestone follows it;
+consult Git history and the remote branch for publication status.
 
-- `make format` equivalent (`uv run --locked ruff format .`): passed.
-- `make check`: Ruff passed; strict mypy passed (8 source files); pytest 9 passed;
-  Ruff format check passed.
-- One upstream Starlette TestClient deprecation warning: httpx transport is deprecated
-  in favor of httpx2. No test failure; revisit testing transport on dependency updates.
-- `uv run --locked pre-commit validate-config`: passed; hooks installed in local .git.
-- `uv build`: wheel and source distribution built successfully.
-- Compose config validation passed. Actual `up -d --wait` succeeded: all four services
-  healthy. PostgreSQL 5432 was occupied; configurable host port now defaults to 55432.
-- Read-only PostgreSQL query confirms vector extension 0.8.7 available, not activated.
-- Actual temporary Uvicorn HTTP smoke test: /health and /ready both HTTP 200; process
-  terminated cleanly after test. Initial sandbox bind attempt failed; permitted retry passed.
-- Docker Desktop was started; the four development containers remain running.
+### Enterprise simulator and fault-injection engine
 
-## Limitations and remaining work (not authorized for this milestone)
+- Dedicated `atlas_simulator` PostgreSQL database; 30 SQLAlchemy 2.0 Core tables and
+  explicit Alembic migration 0001 with FKs, uniqueness/check constraints and indexes.
+- Customers/accounts, orders/payments/events, subscriptions/renewals, products/inventory,
+  support, marketing attribution, financial reports, schema history, lineage, pipelines,
+  operational telemetry and durable event delivery bookkeeping.
+- Storage-independent seeded generator, configurable dates/sizes, small/medium/large
+  profiles, weekly/annual patterns, regional/product differences, churn, renewals and
+  late arrivals. No LLM dependencies.
+- Three real transformations: parsed/watermarked payment ingestion, SQL financial
+  aggregation with FX join, and SQL cancellation/subscription churn join. Persisted DAG,
+  dependencies/downstream consumers, table/column lineage, schema contracts, run status,
+  counts, timings and quality metrics. Cycles rejected before execution.
+- Six configurable deterministic faults: schema drift, delayed arrivals, duplicate
+  transactions, incorrect joins, missing partitions, incorrect currency conversion.
+  All affect actual inputs/transformation behavior and downstream reports.
+- Operator `atlas-sim` CLI for generation, injection, reset, replay, scenarios,
+  evaluator ground truth, schema export, Kafka publication and consumption.
+- Three benchmark JSON scenarios plus six fault examples; actual affected datasets,
+  expected evidence, known causes and deterministic reset procedures.
+- Evaluator-only private file registry, stable fault IDs, wall-clock injection history,
+  metric impacts, pending-intent recovery, serialized reset/replay and private permissions.
+  No oracle tables, IDs or labels in public telemetry; observer role is SELECT-only.
+- Four versioned public Kafka event types, checked-in JSON Schema, transactional outbox,
+  acknowledged publication, stable-ID replay, durable consumer receipts and atomic handlers.
+- Bootstrap/integration scripts, Make targets, runbook and complete schema documentation.
 
-No investigation persistence or APIs, migrations, SQL adapter/policy executor, ingestion,
-simulation, NLP, S3 integration, retrieval, graph memory, LangGraph agents, MCP business
-tools, Celery execution, evaluation runner, frontend, telemetry exporters or Kubernetes
-runtime exists. Reserved README files are scope markers, never feature claims.
-Readiness checks lifecycle only. Contract evidence IDs do not prove evidence validity;
-future services must resolve and verify them. Contracts do not execute or secure SQL.
-ATLAS_LOG_LEVEL is reserved configuration. Production security/HA/backups/digest pinning
-and real dependency integration/contract/fault tests remain unverified/unimplemented.
+## Verification results
 
-Stop here. Next milestone requires explicit user instruction. Keep implementation and
-verification status current after each authorized change.
+- Ruff formatting/lint: passed. Strict mypy: passed, 33 source files.
+- `make check`: 29 passed; 8 opt-in live tests skipped in this invocation, then executed
+  separately with real services via `make sim-integration`: all 8 passed.
+- Unit/contracts verify deterministic data, every FK, database constraints, actual SQL
+  results, DAG ordering/cycles, all six fault impacts, complete baseline regeneration,
+  replay, pending recovery, oracle permissions, event validation and outbox/inbox behavior.
+- PostgreSQL integration verifies all six faults/reset/replay and migration/schema agreement
+  in isolated temporary schemas. Observer permission tests reject writes, outbox access,
+  schema creation and PostgreSQL server-file reads. Kafka test verifies durable replay
+  deduplication across new consumer instances; temporary topics/schemas cleaned up.
+- All three scenario CLIs ran on the dedicated local PostgreSQL database. Baseline:
+  revenue USD 49,557.96; reported payments 681; churned 16. A: revenue 45,009.98;
+  B: churned 280; C: payments 737. Fixture restored to baseline afterward.
+- Real Kafka CLI smoke: 185 outbox events published, 185 received/applied; 185 replayed
+  and received with 0 additional effects. Local observation topic/receipts remain.
+- Pure generator smoke: small 3,865 rows; medium 53,347; large 785,024. Large generated
+  in about 2.4 seconds on this machine; this is not a database-load throughput benchmark.
+- Alembic upgrade and drift check passed on local PostgreSQL. Upgrade/downgrade/schema
+  comparison tested on SQLite. `uv build` passed; archives inspected to exclude private
+  environment/oracle files and include simulator code/source migration.
+- Pre-commit configuration validation and `git diff --check` passed.
+- Compose validation passed and all four containers are actually running/healthy.
+  Fixed intermittent IPv6 localhost Kafka connection failure by advertising IPv4
+  127.0.0.1 to match Docker's loopback binding, then reran live integrations successfully.
+- Existing upstream Starlette/httpx TestClient deprecation warning remains (no failures).
+
+## Current local state
+
+- PostgreSQL host port 55432; Kafka 127.0.0.1:9092; containers remain running.
+- `.env` holds local generated owner/observer credentials; ignored, mode 0600.
+- `.atlas-private` holds evaluator records; ignored, directory 0700/files 0600.
+- Simulator database contains seed-42 small baseline, with public outbox/inbox history.
+- No existing unrelated project was modified. See docs/file-inventory.md.
+
+## Limits and next boundary
+
+One private directory/operator writer per fixture database; local file locks do not
+coordinate unrelated machines. PostgreSQL and private registry are separate stores;
+interrupted intent requires reset. One active fault is allowed. Some no-op parameter
+choices do not cross reporting thresholds; shipped benchmark configurations do.
+Generation is in-memory, database inserts are batched. Medium/large source generation
+was exercised; medium/large full database loading and production performance remain
+unbenchmarked. SQLite unit tests emulate decimals; PostgreSQL is the reference backend
+for reported benchmark financial results. Pipeline execution is a synchronous fixture
+materialization, not a continuously scheduled production ingestion service.
+
+Observer database isolation is verified. Code running as the evaluator OS user can read
+its files; future agent runtimes must have a different identity, no private mounts,
+no evaluator CLI/scenario access and only observation credentials. That deployment
+boundary cannot be verified until an investigation runtime exists.
+
+Next authorized milestone can implement typed read-only database/lineage/telemetry ports
+and adapters consuming the public datasets/events. Keep the private evaluator registry
+outside that boundary. SQL diagnostic policy/timeouts/limits must precede agent-accessible
+SQL. No investigation agents, MCP business tools, RAG/GraphRAG, temporal knowledge memory,
+Celery scheduler, agent causal scoring, frontend or Kubernetes runtime was added.
+
+See docs/simulator.md for exact runnable commands. Stop after this milestone.

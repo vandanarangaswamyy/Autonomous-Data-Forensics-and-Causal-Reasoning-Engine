@@ -1,0 +1,27 @@
+{
+  "name": "Payment inflation from replayed events",
+  "config": {
+    "seed": 42,
+    "start": "2025-11-01",
+    "days": 28,
+    "customers": 80,
+    "orders_per_day": 18
+  },
+  "fault": {
+    "kind": "duplicate_transactions",
+    "day": "2025-11-18",
+    "duration_days": 3
+  },
+  "metric": "payment_count",
+  "direction": "increase",
+  "affected_datasets": [
+    "payment_events",
+    "staged_payments",
+    "daily_financials"
+  ],
+  "expected_evidence": [
+    "Repeated business event keys",
+    "Duplicate data quality alert",
+    "Payment ledger count unchanged"
+  ]
+}

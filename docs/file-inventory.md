@@ -1,7 +1,8 @@
-# Foundation file inventory
+# Source file inventory
 
-All files below were created in the new atlas repository; no existing project files were modified.
-Generated .env (private), .venv, caches, dist artifacts and .git metadata are excluded.
+Complete source inventory after the simulator milestone. The existing foundation files
+were retained or updated; new simulator/evaluation/database modules are included below.
+Ignored .env, .atlas-private, .venv, caches, build artifacts and .git metadata are excluded.
 
 ```text
 .env.example
@@ -13,23 +14,47 @@ DECISIONS.md
 Makefile
 PROJECT_STATE.md
 README.md
+alembic.ini
 apps/api/src/atlas_api/__init__.py
 apps/api/src/atlas_api/main.py
 apps/web/README.md
 docs/architecture.md
 docs/file-inventory.md
+docs/simulator-data-model.md
+docs/simulator.md
 evaluation/README.md
+evaluation/faults/currency_conversion.json
+evaluation/faults/delayed_ingestion.json
+evaluation/faults/duplicate_transactions.json
+evaluation/faults/incorrect_join.json
+evaluation/faults/missing_partitions.json
+evaluation/faults/schema_drift.json
+evaluation/scenarios/a_missing_partitions.json
+evaluation/scenarios/b_incorrect_join.json
+evaluation/scenarios/c_duplicate_events.json
+evaluation/src/atlas_evaluation/__init__.py
+evaluation/src/atlas_evaluation/registry.py
 infrastructure/docker/compose.yaml
 infrastructure/kubernetes/README.md
 packages/contracts/src/atlas_contracts/__init__.py
 packages/contracts/src/atlas_contracts/models.py
+packages/contracts/src/atlas_contracts/simulator_events.py
 packages/core/src/atlas_core/__init__.py
 packages/core/src/atlas_core/config.py
 packages/core/src/atlas_core/errors.py
 packages/database/README.md
+packages/database/migrations/env.py
+packages/database/migrations/script.py.mako
+packages/database/migrations/versions/0001_enterprise_simulator.py
+packages/database/src/atlas_database/__init__.py
+packages/database/src/atlas_database/connection.py
+packages/database/src/atlas_database/schema.py
 packages/observability/README.md
 pyproject.toml
+schemas/events/simulator-v1.json
 scripts/README.md
+scripts/bootstrap_simulator.py
+scripts/test_simulator_integration.py
 services/documents/README.md
 services/graph_memory/README.md
 services/ingestion/README.md
@@ -37,10 +62,25 @@ services/investigation/README.md
 services/mcp/README.md
 services/retrieval/README.md
 services/simulator/README.md
+services/simulator/src/atlas_simulator/__init__.py
+services/simulator/src/atlas_simulator/cli.py
+services/simulator/src/atlas_simulator/domain.py
+services/simulator/src/atlas_simulator/engine.py
+services/simulator/src/atlas_simulator/generator.py
+services/simulator/src/atlas_simulator/pipelines.py
+services/simulator/src/atlas_simulator/settings.py
+services/simulator/src/atlas_simulator/streaming.py
 services/workers/README.md
+tests/conftest.py
 tests/contract/README.md
+tests/contract/test_outbox.py
+tests/contract/test_simulator_events.py
 tests/fault_injection/README.md
 tests/integration/README.md
+tests/integration/test_simulator_kafka.py
+tests/integration/test_simulator_postgres.py
 tests/test_foundation.py
+tests/test_simulator.py
+tests/test_simulator_cli.py
 uv.lock
 ```

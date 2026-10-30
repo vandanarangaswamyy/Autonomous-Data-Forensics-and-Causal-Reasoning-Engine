@@ -66,9 +66,9 @@ repeated native cancellation cleanup, strict Teradata TLS options, atomic privat
 bootstrap files and vendor-neutral result utilities. Driver doubles now patch only
 the driver loader rather than global import machinery. No agents were added.
 
-- `make test-all`: **115 passed, 0 failed, 0 skipped, 1 warning** with real PostgreSQL,
-  Kafka and MCP subprocess integrations enabled. Latest recorded run: 25.77 seconds.
-- Final `make check`: **99 passed, 16 skipped, 1 warning** (8.53 seconds); these skips
+- `make test-all`: **122 passed, 0 failed, 0 skipped, 1 warning** with real PostgreSQL,
+  Kafka and MCP subprocess integrations enabled. Latest recorded run: 28.04 seconds.
+- Final `make check`: **104 passed, 18 skipped, 1 warning** (8.54 seconds); these skips
   are the live cases that all passed under `make test-all`. Strict mypy passed for **62 source files**;
   Ruff lint/format passed. Detailed command evidence is in the review report.
 - Live cases include genuine database timeouts/recovery, binding/injection resistance,
@@ -99,6 +99,57 @@ Teradata. Parts B/C are verified for trusted local stdio operation, not multi-te
 remote deployment. Part D is verified with the above exception for unavailable live
 Teradata. No hidden production mocks were found; the public keyword corpus is deliberately
 limited. Do not equate that scope with a production autonomous investigation platform.
+
+## Phase 2 security re-verification — 2026-10-30
+
+Reviewed committed source at 21711a9 with an initially clean working tree; all seven
+requested fixes were present. Rechecked gateway/audit/native cleanup together rather
+than relying on isolated regression successes. No further production defect confirmed;
+this pass adds seven test cases and strengthens setup/demo assertions. Changes are included in the Phase 2 re-verification commit; Phase 3 has not started.
+
+Exact final verification command: `make format check test-all mcp-integration`.
+
+- Format/check: 92 files; Ruff lint passed; strict mypy passed for 62 source files.
+- Default: **104 passed, 18 skipped, 1 warning in 8.54s**.
+- Complete suite, real services: **122 passed, 0 failed, 0 skipped, 1 warning in 28.04s**.
+- Separate actual PostgreSQL/Kafka/MCP integration rerun: **18 passed, no skips or
+  warnings in 19.46s**. Breakdown: 10 analytics/MCP, 1 Kafka, 7 simulator/observer.
+- Default skips are those same 18 opt-in cases (test environment URLs unset by default),
+  not untested failures. Warning remains upstream Starlette/httpx TestClient deprecation.
+- Composed Teradata adapter/gateway/shared-ledger test: repeated cancellation, request
+  expiry and gateway shutdown keep slots occupied during blocked execute AND blocked
+  close. Finish audit/re-admission occur after close terminates. Uses an explicit
+  controlled driver double; **actual Vantage/native-driver behavior is unverified**.
+- Added cumulative time/row budget persistence, synchronous-handler deadline and known
+  remote-error-code sanitization coverage. Existing token/permission/replay/audit-lock/
+  output-validation/EOF shutdown tests all remain green.
+- Real PostgreSQL query and authentication errors over actual MCP return fixed safe
+  errors in both text and structured content. Canary secrets, SQL, connection URL,
+  observer password and driver diagnostics were absent from responses and audit.
+- Standalone `make mcp-demo` executed via captured subprocess and all nine bodies checked:
+  orders schema 6 columns; 4 currency groups; 605 orders / 0 null totals; real EXPLAIN;
+  15 upstream / 10 downstream lineage edges; 1 execution; 1 incident; 3 public documents.
+  IDs, provenance and body relationships checked; live tests also compare query/profile
+  to direct backend results. No status-only verification claim.
+- Clean source + fresh virtualenv + disposable PostgreSQL again passed make setup,
+  sim-bootstrap, sim-migrate, sim-generate, mcp-demo (strengthened content checks),
+  sim-reset; disposable container/volume removed. Existing four Compose services healthy.
+- `make compose-validate`, `make mcp-schemas`, `uv build`,
+  `uv run --locked alembic check`, `git diff --check` passed. Schema exports unchanged.
+
+Closure: **PostgreSQL/trusted local-MCP scope VERIFIED; overall Phase 2 PARTIAL**.
+Teradata dependencies are MISSING; keys/indexes/numeric mean are MISSING within partial
+metadata/profiling paths. Live connectivity, effective grants, dictionary compatibility,
+parameters, TLS certificates, timeout and native cancellation/cleanup are UNVERIFIED.
+Do not mark the entire phase complete without accepting those exceptions or supplying
+live verification and missing implementation. Remote HTTP deployment and production
+multi-tenant admission remain outside delivered local scope. The full per-requirement
+VERIFIED/PARTIAL/UNVERIFIED/MISSING matrix, exact command evidence and transient
+verification-code failures are in docs/reviews/database-mcp-audit.md.
+
+Next steps: obtain a real Vantage test environment and resolve unsupported mappings;
+authorize scoped principal/investigation admission plus durable quota/audit operations
+before untrusted multi-user use. No Phase 3 work is authorized by this review.
 
 ## Current local state
 

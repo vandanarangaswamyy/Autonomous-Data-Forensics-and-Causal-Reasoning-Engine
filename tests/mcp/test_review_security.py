@@ -12,6 +12,7 @@ from atlas_contracts.analytics import AnalyticsError
 from atlas_contracts.tools import RequestContext, ToolError, ToolReply
 from atlas_mcp.audit import AuditLog, Budget
 from atlas_mcp.catalog import TOOL_PERMISSIONS
+from atlas_mcp.gateway import Gateway
 from atlas_mcp.security import Permission
 from atlas_mcp.server import MCPSettings, make_gateway
 from mcp import types
@@ -20,7 +21,7 @@ from pydantic import SecretStr
 TOKEN = "review-token-" + "r" * 40
 
 
-def gateway_at(directory: Path) -> Any:
+def gateway_at(directory: Path) -> Gateway:
     return make_gateway(
         "knowledge",
         MCPSettings(
@@ -85,7 +86,10 @@ def test_live_owner_keeps_concurrency_slot_after_deadline(tmp_path: Path) -> Non
     assert error.value.code == "concurrency_limited"
 
 
-async def test_remote_error_does_not_reflect_sensitive_message_or_code(tmp_path: Path) -> None:
+@pytest.mark.parametrize("remote_code", ["private-password-from-driver", "database_error"])
+async def test_remote_error_does_not_reflect_sensitive_message_or_code(
+    tmp_path: Path, remote_code: str
+) -> None:
     gateway = gateway_at(tmp_path / "audit")
     advertised = gateway.tools()[0]
     secret = "private-password-from-driver"
@@ -101,7 +105,7 @@ async def test_remote_error_does_not_reflect_sensitive_message_or_code(tmp_path:
                 investigation_id=context.investigation_id,
                 request_id=context.request_id,
                 trace_id=uuid4(),
-                error=ToolError(code=secret, message=secret),
+                error=ToolError(code=remote_code, message=secret),
             )
             return types.CallToolResult(
                 content=[], structuredContent=reply.model_dump(mode="json"), isError=True
@@ -109,7 +113,9 @@ async def test_remote_error_does_not_reflect_sensitive_message_or_code(tmp_path:
 
     await gateway.discover("remote", Endpoint(), TOOL_PERMISSIONS)
     reply = await gateway.invoke("remote.search_technical_documents", arguments(), TOKEN)
-    assert reply.error and reply.error.code == "remote_error"
+    assert reply.error and reply.error.code == (
+        "database_error" if remote_code == "database_error" else "remote_error"
+    )
     assert secret not in reply.model_dump_json()
     assert secret not in gateway.audit.path.read_text()
 
@@ -166,3 +172,52 @@ def test_dead_owner_releases_slot_but_keeps_worst_case_budget(
     assert error.value.code == "budget_exceeded"
     new_investigation = {**other, "investigation_id": str(uuid4())}
     audit.reserve(new_investigation, 1000, 1)
+
+
+@pytest.mark.parametrize("dimension", ["time", "rows"])
+async def test_cumulative_budgets_survive_gateway_restart(tmp_path: Path, dimension: str) -> None:
+    import asyncio
+
+    gateway = gateway_at(tmp_path / "audit")
+    budget = Budget(max_elapsed_ms=100) if dimension == "time" else Budget(max_rows=20)
+    gateway.audit.budget = budget
+    if dimension == "time":
+        spec = gateway.registry["search_technical_documents"]
+        original = spec.execute
+
+        async def measured(args: dict[str, Any]) -> dict[str, Any]:
+            await asyncio.sleep(0.005)
+            return await original(args)
+
+        gateway.registry[spec.name] = replace(spec, execute=measured)
+    request = arguments(100)
+    first = await gateway.invoke("search_technical_documents", request, TOKEN)
+    assert first.status == "ok"
+    restarted = gateway_at(tmp_path / "audit")
+    restarted.audit.budget = budget
+    second = await restarted.invoke(
+        "search_technical_documents",
+        {**request, "context": {**request["context"], "request_id": str(uuid4())}},
+        TOKEN,
+    )
+    assert second.error and second.error.code == "budget_exceeded"
+    records = gateway.audit.records()
+    assert [r["event"] for r in records] == ["started", "finished", "rejected"]
+    assert records[1]["elapsed_ms"] > 0 if dimension == "time" else records[1]["rows"] > 0
+    await gateway.close()
+    await restarted.close()
+
+
+async def test_synchronous_handler_cannot_return_success_after_deadline(tmp_path: Path) -> None:
+    gateway = gateway_at(tmp_path / "audit")
+    spec = gateway.registry["search_technical_documents"]
+
+    async def blocked(args: dict[str, Any]) -> dict[str, Any]:
+        time.sleep(0.04)  # noqa: ASYNC251 -- deliberately simulate a blocking handler
+        return {"matches": [], "retrieval_method": "keyword"}
+
+    gateway.registry[spec.name] = replace(spec, execute=blocked)
+    reply = await gateway.invoke(spec.name, arguments(10), TOKEN)
+    assert reply.error and reply.error.code == "tool_timeout" and reply.result is None
+    assert gateway.audit.records()[-1]["status"] == "error"
+    await gateway.close()

@@ -114,8 +114,24 @@ async def test_all_four_real_mcp_servers(
 ) -> None:
     url = os.environ["ATLAS_TEST_READER_URL"]
     result = await demo(url, tmp_path / "audit")
-    assert len(result["tools"]) == 9
-    assert all(r["status"] == "ok" for r in result["responses"].values())
+    from scripts.verify_clean_mcp_setup import verify_demo_contents
+
+    verify_demo_contents(result)
+    actual = result["responses"]["analytics.execute_readonly_sql"]["result"]
+    expected = await backend.execute_readonly_query(
+        QueryRequest(
+            sql=(
+                "SELECT currency, COUNT(*) AS orders FROM orders "
+                "WHERE total > :minimum GROUP BY currency ORDER BY currency"
+            ),
+            parameters={"minimum": 0},
+            row_limit=10,
+        )
+    )
+    assert actual == expected.model_dump(mode="json")
+    assert result["responses"]["analytics.profile_column"]["result"] == (
+        await backend.get_column_statistics(TableRef(table="orders"), "total")
+    ).model_dump(mode="json")
     assert result["responses"]["lineage.trace_upstream_lineage"]["result"]["edges"]
     assert result["responses"]["knowledge.search_technical_documents"]["result"]["matches"]
     assert (tmp_path / "audit" / "gateway.jsonl").stat().st_mode & 0o777 == 0o600
@@ -259,3 +275,68 @@ async def test_column_write_grant_and_composite_key_order(
             assert isinstance(raw, psycopg.Connection)
             raw.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
             raw.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
+
+
+@pytest.mark.parametrize("failure", ["query", "authentication"])
+async def test_live_mcp_errors_do_not_disclose_driver_or_connection_details(
+    backend: PostgreSQLAnalyticsBackend, tmp_path: Path, failure: str
+) -> None:
+    import json
+
+    from atlas_mcp.client import server_parameters
+    from atlas_mcp.security import Permission
+    from atlas_mcp.transports import local_transport
+    from pydantic import SecretStr
+    from sqlalchemy.engine import make_url
+
+    token = SecretStr("sanitization-test-" + "q" * 40)
+    canary = "private_marker_" + uuid4().hex
+    reader = os.environ["ATLAS_TEST_READER_URL"]
+    parsed = make_url(reader)
+    if failure == "authentication":
+        reader = parsed.set(username=canary, password=canary).render_as_string(hide_password=False)
+    query = f"SELECT {canary} FROM orders" if failure == "query" else "SELECT id FROM orders"
+    audit_dir = tmp_path / "audit"
+    parameters = server_parameters(
+        "analytics", token, reader, audit_dir, frozenset({Permission.QUERY})
+    )
+    async with local_transport(parameters, token) as transport:
+        reply = await transport.call_tool(
+            "execute_readonly_sql",
+            {
+                "context": {
+                    "investigation_id": str(uuid4()),
+                    "request_id": str(uuid4()),
+                    "timeout_ms": 10000,
+                },
+                "query": {"sql": query},
+            },
+        )
+        assert reply.isError and reply.structuredContent
+        assert reply.structuredContent["result"] is None
+        assert reply.structuredContent["error"] == {
+            "code": "database_error",
+            "message": "Database operation failed",
+            "retryable": True,
+        }
+        response_and_audit = reply.model_dump_json() + (audit_dir / "analytics.jsonl").read_text()
+        sensitive = (
+            canary,
+            reader,
+            parsed.password,
+            token.get_secret_value(),
+            query,
+            "psycopg",
+            "Traceback",
+            "connection failed",
+            "does not exist",
+        )
+        for value in sensitive:
+            if value:
+                assert value not in response_and_audit
+        # Verify the text and structured MCP representations agree and are both sanitized.
+        from mcp.types import TextContent
+
+        content = reply.content[0]
+        assert isinstance(content, TextContent)
+        assert json.loads(content.text) == reply.structuredContent

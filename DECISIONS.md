@@ -95,3 +95,19 @@
     source/bootstrap harness using a disposable database container. Separate real-service
     evidence from explicitly scoped test doubles and keep remaining admission/audit/
     remote/Teradata gaps visible before starting autonomous agent work.
+29. **Security closure requires composed boundaries.** Re-verify cancellation through
+    adapter, gateway semaphore, shared audit lease and shutdown together; isolated
+    adapter and lease tests cannot establish admission safety. Keep slots occupied
+    during both native execution and native close, even after request expiry/repeated
+    cancellation. Controlled driver doubles prove coordination only, not Vantage behavior.
+30. **Verify contents and negative-path privacy.** Setup/demo verification checks all
+    nine tool bodies, provenance and correlations; compare live query/profile results
+    directly. Test real database query/authentication failures over SDK stdio and inspect
+    text/structured replies and audits for canary SQL, credentials and connection details.
+    Recognized remote error codes still do not authorize forwarding peer messages.
+31. **Use explicit partial closure.** PostgreSQL/local MCP can be verified while the
+    broader phase remains partial. Mark missing Teradata mappings separately from
+    implemented-but-live-unverified driver paths. No live Vantage claim follows from
+    installing a driver, using a double or passing PostgreSQL tests. Local per-investigation
+    budgets and single-host audit leases do not supply production tenant admission,
+    distributed quotas, token lifecycle or remote transport security. Phase 3 remains deferred.

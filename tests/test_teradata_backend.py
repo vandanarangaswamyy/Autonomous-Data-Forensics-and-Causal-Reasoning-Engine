@@ -1,5 +1,6 @@
 """Driver wiring tests only. These tests do not assert live Teradata integration."""
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -152,3 +153,123 @@ async def test_repeated_cancellation_waits_for_driver_close(
         query_release.set()
         await asyncio.gather(task, return_exceptions=True)
         assert await asyncio.to_thread(closed.wait, 1)
+
+
+async def test_gateway_retains_native_slot_until_query_and_close_terminate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Composed gateway/ledger/native-worker test; not live Vantage verification."""
+    import asyncio
+    import threading
+    from uuid import uuid4
+
+    from atlas_contracts.tools import SQLInput, ToolReply
+    from atlas_mcp.audit import AuditLog, Budget
+    from atlas_mcp.gateway import Gateway, ToolSpec
+    from atlas_mcp.security import Authorizer, Permission, Principal
+
+    started, cancelling, release_query, closing, release_close, closed = (
+        threading.Event() for _ in range(6)
+    )
+
+    class Cursor:
+        description = [("value",)]
+
+        def __enter__(self) -> "Cursor":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def execute(self, sql: str, params: object) -> None:
+            started.set()
+            assert release_query.wait(5)
+
+        def fetchmany(self, size: int) -> list[tuple[int]]:
+            return [(1,)]
+
+    class Connection:
+        def cursor(self) -> Cursor:
+            return Cursor()
+
+        def cancel(self) -> None:
+            cancelling.set()
+
+        def close(self) -> None:
+            closing.set()
+            assert release_close.wait(5)
+            closed.set()
+
+    monkeypatch.setattr(
+        "atlas_database.analytics.teradata._load_driver",
+        lambda: SimpleNamespace(connect=lambda **kwargs: Connection()),
+    )
+    token = SecretStr("composed-native-test-" + "x" * 40)
+    authorizer = Authorizer(
+        token, Principal(id="native-review", permissions=frozenset({Permission.QUERY}))
+    )
+    path = tmp_path / "audit" / "calls.jsonl"
+    gateway, contender = (
+        Gateway(authorizer, AuditLog(path, Budget(concurrency=1))) for _ in range(2)
+    )
+    backend = adapter(True)
+
+    async def execute(args: dict[str, Any]) -> dict[str, Any]:
+        request = SQLInput.model_validate(args)
+        return (await backend.execute_readonly_query(request.query)).model_dump(mode="json")
+
+    spec = ToolSpec(
+        "native_query",
+        Permission.QUERY,
+        SQLInput.model_json_schema(),
+        ToolReply.model_json_schema(),
+        execute,
+    )
+    gateway.register(spec)
+    contender.register(spec)
+
+    def arguments() -> dict[str, Any]:
+        return {
+            "context": {
+                "investigation_id": str(uuid4()),
+                "request_id": str(uuid4()),
+                "timeout_ms": 100,
+            },
+            "query": {"sql": "SELECT 1 FROM orders"},
+        }
+
+    task = asyncio.create_task(gateway.invoke(spec.name, arguments(), token.get_secret_value()))
+    shutdown = None
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        task.cancel()
+        assert await asyncio.to_thread(cancelling.wait, 2)
+        task.cancel()
+        shutdown = asyncio.create_task(gateway.close())
+        await asyncio.sleep(0.02)
+        assert not task.done() and not shutdown.done()
+        # Let the original request lease expire while execute remains blocked.
+        await asyncio.sleep(0.12)
+        for phase in ("execute", "close"):
+            if phase == "close":
+                release_query.set()
+                assert await asyncio.to_thread(closing.wait, 2)
+            denied = await contender.invoke(spec.name, arguments(), token.get_secret_value())
+            assert denied.error and denied.error.code == "concurrency_limited"
+            assert not task.done() and not closed.is_set()
+            assert gateway._semaphore.locked()
+            assert not any(r["event"] == "finished" for r in gateway.audit.records())
+        release_close.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await shutdown
+        assert closed.is_set() and not gateway._semaphore.locked()
+        finished = [r for r in gateway.audit.records() if r["event"] == "finished"]
+        assert len(finished) == 1 and finished[0]["error_code"] == "cancelled"
+        accepted = await contender.invoke(spec.name, arguments(), token.get_secret_value())
+        assert accepted.status == "ok" and accepted.result and accepted.result["rows"] == [[1]]
+    finally:
+        release_query.set()
+        release_close.set()
+        await asyncio.gather(task, *([shutdown] if shutdown else []), return_exceptions=True)
+        await contender.close()

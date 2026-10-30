@@ -167,3 +167,254 @@ hard-preempted by asyncio. Deadline checks prevent expired work from starting or
 reported successful; cleanup may exceed the response deadline. Large database cells
 are decoded before the response-byte cap. Same-OS-user filesystem access is not sandboxed.
 Those limits must stay explicit; do not call this a hardened autonomous execution platform.
+
+## Phase 2 re-verification (2026-10-30)
+
+Reviewed commit `21711a9` against the original Parts A–D. Initial `git status --short`
+and `git diff --stat` were empty: the fixes were committed, not missing from an
+uncommitted diff. Read the complete gateway/audit/adapter paths and regression tests;
+confirmed all seven requested fixes in source, then exercised the composed boundaries.
+No additional production defect was confirmed. Changes in this pass strengthen
+verification; they do not add Phase 3 functionality or alter production authorization.
+
+### Additional verification
+
+- Native-cleanup test composes the real gateway, shared audit ledger and Teradata
+  adapter with an explicitly controlled driver double. Repeated cancellation plus
+  gateway shutdown leave the semaphore locked and the shared slot occupied after the
+  request deadline, during both blocked execute and blocked connection close. A second
+  gateway is denied; only after close terminates is a finished cancellation audited
+  and another request admitted. This proves Python coordination with a controlled
+  native-worker boundary; actual Teradata native behavior is still UNVERIFIED.
+- Time and row budgets persist across gateway restart, alongside existing call-budget,
+  duplicate-ID, permission, audit-failure, deadline and shutdown regressions. A new
+  synchronously blocking handler cannot return success after its deadline.
+- Remote failures with both recognized and unrecognized codes discard sensitive text.
+  Real PostgreSQL undefined-column and authentication errors traverse actual MCP stdio
+  servers. Both structured and text responses contain the same safe database_error;
+  responses/audits omit canary identifiers, passwords, URLs, SQL and driver diagnostics.
+  This is tested coverage of these error paths, not a proof about every future plugin.
+- Demo validation now examines every tool body, correlation/unique request/trace IDs,
+  schema/PK/indexes, aggregate rows, numeric profile, nonexecuting plan, expected lineage
+  edges, execution/incident fields and public-document provenance. Live integration
+  additionally compares SQL results and profiles to direct read-only backend calls.
+- Actual demo: schema 6 columns; 4 currency groups; profile 605 orders / 0 null totals;
+  upstream 15 edges; downstream 10 edges; 1 pipeline execution; 1 source incident;
+  3 document matches. All nine statuses were ok and all content assertions passed.
+- Clean temporary source copy with a fresh virtualenv, generated credentials and
+  disposable PostgreSQL passed setup/bootstrap/migrate/generate/demo/reset again.
+  The demo used the strengthened content checks. Only its container/volume were removed.
+  This is a fresh PostgreSQL fixture, not a fresh host or new four-service Compose cluster.
+
+### Complete requirement classification
+
+VERIFIED means source inspection plus passing local tests for the stated boundary.
+PARTIAL means implemented with material restrictions. UNVERIFIED means implementation
+exists but the required real environment was unavailable. MISSING means no implementation.
+These labels supersede any implication of universal completion in earlier tables.
+
+| Part A requirement | PostgreSQL | Teradata |
+|---|---|---|
+| Typed AnalyticsBackend protocol with all seven operations | VERIFIED | VERIFIED (structural contract only) |
+| execute_readonly_query | VERIFIED | UNVERIFIED (official-driver path) |
+| get_schema | VERIFIED | UNVERIFIED (allowlisted tables only) |
+| get_table_metadata | VERIFIED (base tables, wide/composite cases) | PARTIAL (ColumnsV path unverified; keys/indexes missing) |
+| get_column_statistics | VERIFIED | PARTIAL (aggregate path unverified; numeric mean missing) |
+| get_query_plan | VERIFIED | UNVERIFIED |
+| get_table_dependencies | VERIFIED (foreign keys) | MISSING (explicit unsupported_capability) |
+| get_supported_capabilities | VERIFIED | VERIFIED (accurately reports no live verification) |
+| Working backend end to end | VERIFIED | UNVERIFIED |
+| Official supported driver, honest unavailable features | VERIFIED (psycopg) | VERIFIED (teradatasql import path; no fake fallback) |
+| Dialect-aware AST safety; not regex alone | VERIFIED | VERIFIED (parser/policy tests, no live SQL proof) |
+| Read-only roles | VERIFIED (including column grants) | PARTIAL (administrator attestation only) |
+| Query timeouts | VERIFIED (actual timeout/recovery) | UNVERIFIED (options/coordination tested with doubles) |
+| Row limits | VERIFIED | UNVERIFIED (bounded-fetch wiring tested with doubles) |
+| Parameter binding | VERIFIED (live injection/literal-percent cases) | UNVERIFIED (generated positional order tested with doubles) |
+
+| Part B requirement | Classification | Evidence / limit |
+|---|---|---|
+| Official Python MCP SDK | VERIFIED | Actual SDK sessions and subprocesses |
+| Independent Analytics server | VERIFIED | Direct stdio and gateway client |
+| Independent Lineage server | VERIFIED | Persisted simulator lineage |
+| Independent Telemetry server | VERIFIED | Persisted simulator execution/events |
+| Independent Knowledge Retrieval server | VERIFIED | Three real public documents; lexical search only |
+| get_table_schema | VERIFIED | Schema/keys/indexes checked live |
+| execute_readonly_sql | VERIFIED | Bound aggregates, denial, timeout and safe failures live |
+| profile_column | VERIFIED | Live numeric aggregate compared directly |
+| get_query_plan | VERIFIED | Real EXPLAIN JSON, executes_query=false |
+| trace_upstream_lineage | VERIFIED | Expected source/destination and column edges |
+| trace_downstream_lineage | VERIFIED | Expected source/destination and column edges |
+| get_pipeline_execution | VERIFIED | Real ingest run, status/counts/quality |
+| search_incident_history | VERIFIED | Real source event/code matching |
+| search_technical_documents | VERIFIED | Real excerpts, scores and public URIs |
+| Typed input for every tool | VERIFIED | Pydantic/JSON Schema plus invalid-input tests |
+| Typed output for every tool | VERIFIED | Runtime/export agreement; invalid_output regression |
+| Structured errors for every tool | VERIFIED | Correlated safe ToolReply, including actual driver failures |
+| Timeouts for every tool | VERIFIED | Outer gateway deadline plus database bounds; cleanup may overrun |
+| Correlation IDs for every tool | VERIFIED | Investigation/request/trace and remote mismatch tests |
+| Audit logging for every tool | VERIFIED | Started/finished/rejected records; fail-closed persistence |
+| Explicit permissions for every tool | VERIFIED | Trusted static mapping, server-side enforcement |
+
+| Part C requirement | Classification | Evidence / limit |
+|---|---|---|
+| Discover available tools | VERIFIED | Nine tools through four real SDK servers |
+| Maintain registry | VERIFIED | Typed descriptors, unique names, schema checks |
+| Enforce tool permissions | VERIFIED | Token + principal mapping; direct-server denial |
+| Apply request budgets | VERIFIED | Local call/time/row reservations and restart tests |
+| Enforce concurrency | VERIFIED | Semaphore + shared-ledger admission; composed cleanup test |
+| Record execution traces | VERIFIED | Durable correlated/hash-only local audit |
+| Prevent unauthorized invocation | VERIFIED | Missing/wrong token, missing/forged permissions denied |
+| Local MCP transport | VERIFIED | Working stdio demo, EOF zero-exit test |
+| Extensible remote transport interface | VERIFIED | Typed transport and schema/correlation tests |
+| Remote HTTP/TLS/OAuth deployment | MISSING | Not required by the interface-only Phase 2 deliverable |
+| Authorization independent of MCP | VERIFIED | Explicit Authorizer, default-empty permissions |
+| Production multi-tenant admission / distributed quotas | MISSING | Not implemented; local operator boundary only |
+
+| Part D requirement | Classification | Evidence / limit |
+|---|---|---|
+| MCP discovery tests | VERIFIED | Actual stdio plus registry tests |
+| Tool execution tests | VERIFIED | All nine tools against actual PostgreSQL fixtures |
+| Invalid-input tests | VERIFIED | Schema/Pydantic errors and safe replies |
+| Permission-denial tests | VERIFIED | Direct server plus proxy paths |
+| Query-timeout tests | VERIFIED | PostgreSQL statement timeout and gateway deadlines |
+| SQL-injection tests | VERIFIED | Both AST dialects; live PostgreSQL binding |
+| Backend contract compliance | PARTIAL | PostgreSQL live; Teradata structural/wiring only |
+| Audit-generation tests | VERIFIED | Records, privacy, locks, failures, leases, budgets |
+| Graceful-shutdown tests | VERIFIED | Real stdio EOF and composed gateway cancellation |
+| Working local MCP client | VERIFIED | All nine response bodies checked |
+| Run tests / update documentation | VERIFIED | Exact results and commands below |
+| Stop after Phase 2 | VERIFIED | No agents, RAG or temporal memory added |
+
+### Exact commands and results for this pass
+
+Run from the repository root. The successful final quality/full/live invocation was:
+
+```sh
+make format check test-all mcp-integration
+```
+
+It executes exactly:
+
+```sh
+uv run --locked ruff format .
+uv run --locked ruff check .
+uv run --locked mypy
+uv run --locked pytest
+uv run --locked ruff format --check .
+uv run --locked python scripts/test_simulator_integration.py --all
+uv run --locked python scripts/test_simulator_integration.py
+```
+
+| Final check | Exact outcome |
+|---|---|
+| Ruff format / format check | 92 files unchanged / already formatted |
+| Ruff lint | All checks passed |
+| Strict mypy | Success: 62 source files |
+| Default pytest | 104 passed, 18 skipped, 1 warning, 8.54s |
+| Complete suite with actual services | 122 passed, 0 skipped, 1 warning, 28.04s |
+| Separate live integration rerun | 18 passed, 0 skipped, 0 warnings, 19.46s |
+
+The default skips are exactly all 18 opt-in integration cases: 10 in
+`test_analytics_backend.py` (including two key/grant parameters and two privacy
+parameters), 1 Kafka replay/dedup case and 7 PostgreSQL simulator/observer cases.
+The reasons are unset ATLAS_TEST_READER_URL / ATLAS_TEST_POSTGRES_URL in the default
+invocation. All run in test-all; there are no skipped Teradata tests masquerading as
+live verification. The one warning is the existing upstream Starlette/httpx TestClient
+deprecation. No final test failures remain.
+
+Other successful verification commands:
+
+```sh
+git status --short
+git diff --stat
+git show --stat --oneline HEAD
+docker compose --env-file .env -f infrastructure/docker/compose.yaml ps
+make compose-validate
+uv run --locked pytest tests/test_teradata_backend.py -q
+uv run --locked python scripts/verify_clean_mcp_setup.py
+make mcp-schemas
+uv build
+uv run --locked alembic check
+git diff --check
+```
+
+The focused driver run was 4 passed in 0.63s; it preceded and does not replace the
+complete-suite run. Builds produced source and wheel; Alembic reported no new upgrade
+operations. All four actual Compose services were healthy. Schema exports were unchanged.
+The clean harness executed these exact targets in its temporary source copy:
+
+```sh
+make setup
+make sim-bootstrap
+make sim-migrate
+make sim-generate
+make mcp-demo
+make sim-reset
+```
+
+Standalone documented demo execution/content check (stdout captured to avoid dumping
+raw data into this report) was performed with:
+
+```python
+import json
+import subprocess
+from scripts.verify_clean_mcp_setup import verify_demo_contents
+result = subprocess.run(['make', 'mcp-demo'], capture_output=True, text=True, check=True)
+payload = json.loads(result.stdout[result.stdout.index('{'):])
+verify_demo_contents(payload)
+```
+
+The Python block ran via `uv run --locked python -`. It then printed only counts/status
+summaries listed above. No credential-bearing environment values were shell-expanded.
+
+Initial verification before new tests passed 115 full / 16 live and 99 default with
+16 skips. During test development, combined checks stopped at two Ruff errors (long
+SQL literal, intentionally blocking test handler), then strict typing errors (generic
+dict, an Any-return helper and MCP union narrowing). These verification-code defects
+were corrected before the successful final run; no failing run was counted as a pass.
+
+### Closure decision and remaining risks
+
+The PostgreSQL and trusted local-MCP security verification is ready to close. The entire
+Phase 2 must remain PARTIAL if closure requires live Teradata or all backend operations:
+Teradata dependencies are MISSING, metadata/statistics are PARTIAL, and actual Vantage
+connectivity, effective grants, catalogs, binding, TLS certificates, timeout and native
+cancellation/resource cleanup are UNVERIFIED. No real Teradata connection was made.
+Accept these exceptions explicitly before treating the whole phase as complete.
+
+Existing limits remain: caller-created investigation IDs can avoid per-investigation
+quotas without admission; no token issuer/expiry or tenant/global budgets; local audit
+rotation, PID recovery, single-host locks and same-user filesystem trust; no remote
+authenticated deployment; synchronous fsync and stuck native work can outlast deadlines;
+byte limits apply after cell decoding. Tests do not convert those design limits into
+production guarantees. Next work is scoped principal/investigation admission and durable
+budget/audit operations, or a live Vantage verification environment, under a separate
+authorized task. Phase 3 has not started. This pass is recorded in the Phase 2 re-verification commit.
+
+Exact default-skipped test IDs (all passed in the full/live runs):
+
+```text
+tests/integration/test_analytics_backend.py::test_postgres_backend_contract
+tests/integration/test_analytics_backend.py::test_binding_injection_and_literal_percent
+tests/integration/test_analytics_backend.py::test_real_query_timeout_and_recovery
+tests/integration/test_analytics_backend.py::test_owner_role_rejected_and_response_byte_budget
+tests/integration/test_analytics_backend.py::test_all_four_real_mcp_servers
+tests/integration/test_analytics_backend.py::test_live_mcp_timeout_denial_and_sql_safety
+tests/integration/test_analytics_backend.py::test_column_write_grant_and_composite_key_order[False]
+tests/integration/test_analytics_backend.py::test_column_write_grant_and_composite_key_order[True]
+tests/integration/test_analytics_backend.py::test_live_mcp_errors_do_not_disclose_driver_or_connection_details[query]
+tests/integration/test_analytics_backend.py::test_live_mcp_errors_do_not_disclose_driver_or_connection_details[authentication]
+tests/integration/test_simulator_kafka.py::test_real_kafka_replay_and_durable_dedup
+tests/integration/test_simulator_postgres.py::test_real_postgres_faults[schema_drift]
+tests/integration/test_simulator_postgres.py::test_real_postgres_faults[delayed_ingestion]
+tests/integration/test_simulator_postgres.py::test_real_postgres_faults[duplicate_transactions]
+tests/integration/test_simulator_postgres.py::test_real_postgres_faults[incorrect_join]
+tests/integration/test_simulator_postgres.py::test_real_postgres_faults[missing_partitions]
+tests/integration/test_simulator_postgres.py::test_real_postgres_faults[currency_conversion]
+tests/integration/test_simulator_postgres.py::test_observer_privileges
+```
+
+Files modified by this re-verification only: PROJECT_STATE.md, DECISIONS.md,
+docs/reviews/database-mcp-audit.md, scripts/verify_clean_mcp_setup.py,
+tests/integration/test_analytics_backend.py, tests/mcp/test_review_security.py,
+tests/test_teradata_backend.py. Production modules and schema artifacts are unchanged.

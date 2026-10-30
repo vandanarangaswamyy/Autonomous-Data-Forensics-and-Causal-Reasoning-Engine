@@ -11,7 +11,82 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
+
+
+def verify_demo_contents(payload: dict[str, Any]) -> None:
+    """Check actual nine-tool content, rather than a process exit or status alone."""
+    responses = payload["responses"]
+    expected = {
+        "analytics.get_table_schema",
+        "analytics.execute_readonly_sql",
+        "analytics.profile_column",
+        "analytics.get_query_plan",
+        "lineage.trace_upstream_lineage",
+        "lineage.trace_downstream_lineage",
+        "telemetry.get_pipeline_execution",
+        "telemetry.search_incident_history",
+        "knowledge.search_technical_documents",
+    }
+    assert set(payload["tools"]) == set(responses) == expected
+    request_ids, trace_ids = set(), set()
+    for reply in responses.values():
+        assert reply["status"] == "ok" and reply["error"] is None
+        assert reply["investigation_id"] == payload["investigation_id"]
+        request_ids.add(reply["request_id"])
+        trace_ids.add(reply["trace_id"])
+    assert len(request_ids) == len(trace_ids) == 9
+    results = {name: reply["result"] for name, reply in responses.items()}
+    schema = results["analytics.get_table_schema"]
+    assert schema["reference"] == {"schema_name": "public", "table": "orders"}
+    assert {c["name"] for c in schema["columns"]} >= {"id", "account_id", "total", "currency"}
+    assert schema["primary_key"] == ["id"] and schema["indexes"]
+    query = results["analytics.execute_readonly_sql"]
+    assert query["columns"] == ["currency", "orders"] and not query["truncated"]
+    assert query["row_count"] == len(query["rows"]) > 0
+    assert all(
+        len(row) == 2 and isinstance(row[0], str) and int(row[1]) > 0 for row in query["rows"]
+    )
+    profile = results["analytics.profile_column"]
+    assert profile["column"] == "total" and profile["total_rows"] > 0
+    assert profile["null_rows"] == 0 and profile["numeric_mean"] is not None
+    assert float(profile["numeric_mean"]) > 0
+    assert sum(int(row[1]) for row in query["rows"]) == profile["total_rows"]
+    plan = results["analytics.get_query_plan"]
+    assert plan["dialect"] == "postgres" and plan["executes_query"] is False
+    assert plan["plan"][0]["Plan"]["Node Type"]
+    for name, source, destination in (
+        ("lineage.trace_upstream_lineage", "staged_payments", "daily_financials"),
+        ("lineage.trace_downstream_lineage", "payment_events", "staged_payments"),
+    ):
+        lineage = results[name]
+        assert not lineage["truncated"] and lineage["edges"]
+        assert any(
+            edge["source_dataset"] == source and edge["destination_dataset"] == destination
+            for edge in lineage["edges"]
+        )
+        assert all(
+            edge["source_column"] and edge["destination_column"] and edge["expression"]
+            for edge in lineage["edges"]
+        )
+    executions = results["telemetry.get_pipeline_execution"]["executions"]
+    assert executions and all(row["pipeline_id"] == "ingest" for row in executions)
+    assert all(
+        row["status"] in {"success", "degraded"} and row["output_rows"] > 0 and row["quality"]
+        for row in executions
+    )
+    incidents = results["telemetry.search_incident_history"]["incidents"]
+    assert incidents and all("source" in row["code"].lower() for row in incidents)
+    documents = results["knowledge.search_technical_documents"]
+    assert documents["retrieval_method"] == "keyword" and documents["matches"]
+    assert any(row["document_id"] == "payment-ingestion" for row in documents["matches"])
+    assert all(
+        row["source_uri"].startswith("atlas-public://technical/")
+        and row["excerpt"]
+        and row["score"] > 0
+        for row in documents["matches"]
+    )
 
 
 def main() -> None:
@@ -108,8 +183,7 @@ def main() -> None:
                     )
                 if target == "mcp-demo":
                     payload = json.loads(result.stdout[result.stdout.index("{") :])
-                    assert len(payload["responses"]) == 9
-                    assert all(reply["status"] == "ok" for reply in payload["responses"].values())
+                    verify_demo_contents(payload)
                 print(f"fresh checkout: make {target} passed", flush=True)
         finally:
             if started:

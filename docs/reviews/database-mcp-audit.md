@@ -359,8 +359,9 @@ raw data into this report) was performed with:
 import json
 import subprocess
 from scripts.verify_clean_mcp_setup import verify_demo_contents
-result = subprocess.run(['make', 'mcp-demo'], capture_output=True, text=True, check=True)
-payload = json.loads(result.stdout[result.stdout.index('{'):])
+
+result = subprocess.run(["make", "mcp-demo"], capture_output=True, text=True, check=True)
+payload = json.loads(result.stdout[result.stdout.index("{") :])
 verify_demo_contents(payload)
 ```
 

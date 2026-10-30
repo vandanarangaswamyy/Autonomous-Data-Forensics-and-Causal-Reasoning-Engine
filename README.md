@@ -1,12 +1,13 @@
 # ATLAS
 
 Autonomous Data Forensics and Causal Reasoning Engine. Implemented milestones:
-engineering foundation and enterprise simulator/fault-injection engine. The simulator
+engineering foundation, enterprise simulator/fault-injection engine, and database/MCP infrastructure. The simulator
 provides 30 related tables, deterministic business data, executable pipelines, six faults,
-three benchmarks and Kafka telemetry with replay/deduplication. Investigation agents,
-RAG and MCP business tools remain unimplemented.
+three benchmarks and Kafka telemetry with replay/deduplication. Investigation agents
+and RAG remain unimplemented. PostgreSQL diagnostics and nine authorized MCP tools are implemented;
+Teradata driver paths remain live unverified.
 
-See [simulator setup and examples](docs/simulator.md), [architecture](docs/architecture.md),
+See [database/MCP setup](docs/database-mcp.md), [simulator setup and examples](docs/simulator.md), [architecture](docs/architecture.md),
 [decisions](DECISIONS.md) and [project state](PROJECT_STATE.md).
 
 Requires Python 3.12, uv, Make and a running Docker daemon with Compose.
@@ -16,6 +17,7 @@ cd /Users/vandanarangaswamy/Documents/atlas
 make setup
 # Only if .env does not already exist:
 cp .env.example .env
+chmod 600 .env
 # Generate two independent passwords and put them in .env:
 openssl rand -hex 32
 openssl rand -hex 32
@@ -52,3 +54,14 @@ uv run --locked atlas-sim scenario evaluation/scenarios/a_missing_partitions.jso
 make sim-reset
 make sim-integration
 ```
+
+Run the authorized MCP client against the simulator:
+
+```sh
+make mcp-demo
+make mcp-integration
+make test-all
+```
+
+The [database/MCP review](docs/reviews/database-mcp-audit.md) records confirmed fixes,
+requirement coverage and remaining production boundaries.

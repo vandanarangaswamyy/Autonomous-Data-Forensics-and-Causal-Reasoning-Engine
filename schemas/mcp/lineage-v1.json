@@ -1,0 +1,484 @@
+{
+  "contract_version": 1,
+  "server": "lineage",
+  "tools": [
+    {
+      "name": "trace_upstream_lineage",
+      "description": "Authorized lineage:read operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "dataset": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Dataset",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Column"
+          },
+          "max_depth": {
+            "default": 5,
+            "maximum": 10,
+            "minimum": 1,
+            "title": "Max Depth",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "context",
+          "dataset"
+        ],
+        "title": "LineageInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "LineageEdge": {
+            "additionalProperties": false,
+            "properties": {
+              "pipeline_id": {
+                "title": "Pipeline Id",
+                "type": "string"
+              },
+              "source_dataset": {
+                "title": "Source Dataset",
+                "type": "string"
+              },
+              "destination_dataset": {
+                "title": "Destination Dataset",
+                "type": "string"
+              },
+              "source_column": {
+                "title": "Source Column",
+                "type": "string"
+              },
+              "destination_column": {
+                "title": "Destination Column",
+                "type": "string"
+              },
+              "expression": {
+                "title": "Expression",
+                "type": "string"
+              }
+            },
+            "required": [
+              "pipeline_id",
+              "source_dataset",
+              "destination_dataset",
+              "source_column",
+              "destination_column",
+              "expression"
+            ],
+            "title": "LineageEdge",
+            "type": "object"
+          },
+          "LineageResult": {
+            "additionalProperties": false,
+            "properties": {
+              "edges": {
+                "items": {
+                  "$ref": "#/$defs/LineageEdge"
+                },
+                "title": "Edges",
+                "type": "array"
+              },
+              "truncated": {
+                "title": "Truncated",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "edges",
+              "truncated"
+            ],
+            "title": "LineageResult",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LineageResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "trace_upstream_lineageReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "lineage:read"
+      }
+    },
+    {
+      "name": "trace_downstream_lineage",
+      "description": "Authorized lineage:read operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "dataset": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Dataset",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Column"
+          },
+          "max_depth": {
+            "default": 5,
+            "maximum": 10,
+            "minimum": 1,
+            "title": "Max Depth",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "context",
+          "dataset"
+        ],
+        "title": "LineageInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "LineageEdge": {
+            "additionalProperties": false,
+            "properties": {
+              "pipeline_id": {
+                "title": "Pipeline Id",
+                "type": "string"
+              },
+              "source_dataset": {
+                "title": "Source Dataset",
+                "type": "string"
+              },
+              "destination_dataset": {
+                "title": "Destination Dataset",
+                "type": "string"
+              },
+              "source_column": {
+                "title": "Source Column",
+                "type": "string"
+              },
+              "destination_column": {
+                "title": "Destination Column",
+                "type": "string"
+              },
+              "expression": {
+                "title": "Expression",
+                "type": "string"
+              }
+            },
+            "required": [
+              "pipeline_id",
+              "source_dataset",
+              "destination_dataset",
+              "source_column",
+              "destination_column",
+              "expression"
+            ],
+            "title": "LineageEdge",
+            "type": "object"
+          },
+          "LineageResult": {
+            "additionalProperties": false,
+            "properties": {
+              "edges": {
+                "items": {
+                  "$ref": "#/$defs/LineageEdge"
+                },
+                "title": "Edges",
+                "type": "array"
+              },
+              "truncated": {
+                "title": "Truncated",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "edges",
+              "truncated"
+            ],
+            "title": "LineageResult",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LineageResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "trace_downstream_lineageReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "lineage:read"
+      }
+    }
+  ]
+}

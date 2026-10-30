@@ -36,3 +36,15 @@ sim-reset:
 	$(UV) run --locked atlas-sim reset
 sim-integration:
 	$(UV) run --locked python scripts/test_simulator_integration.py
+
+.PHONY: mcp-demo mcp-integration mcp-schemas
+mcp-demo:
+	$(UV) run --locked atlas-mcp-client
+mcp-integration:
+	$(UV) run --locked python scripts/test_simulator_integration.py
+mcp-schemas:
+	$(UV) run --locked python scripts/export_mcp_schemas.py
+
+.PHONY: test-all
+test-all:
+	$(UV) run --locked python scripts/test_simulator_integration.py --all

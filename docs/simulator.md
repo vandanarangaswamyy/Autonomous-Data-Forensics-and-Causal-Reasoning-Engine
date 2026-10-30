@@ -12,7 +12,7 @@ From the repository root with Python 3.12, uv, Docker and Compose installed:
 
 ```sh
 make setup
-# On a fresh checkout: cp .env.example .env
+# On a fresh checkout: cp .env.example .env && chmod 600 .env
 # Set independent POSTGRES_PASSWORD and NEO4J_PASSWORD values in .env.
 make infra-up
 make sim-bootstrap

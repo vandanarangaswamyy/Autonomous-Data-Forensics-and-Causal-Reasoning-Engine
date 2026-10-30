@@ -34,3 +34,13 @@ Simulator-specific rules:
   default integration skips are not evidence that PostgreSQL or Kafka was tested.
 - Record generator algorithm/configuration changes; do not silently reuse old benchmark
   truth after changing fixture semantics. One private directory/operator writer per DB.
+
+Database/MCP rules:
+- Read docs/database-mcp.md before changing SQL validation, tools, transport or gateway policy.
+- Preserve fail-closed AST validation and independent SELECT-only database enforcement.
+- Never infer application authorization from MCP hints, schemas or client-supplied permissions.
+- Do not pass simulator owner credentials, .env or evaluator mounts to MCP/agent runtimes.
+- Run make mcp-integration for database/MCP changes; include real PostgreSQL timeout and
+  SDK stdio tests. Driver doubles do not establish live Teradata compatibility.
+- Keep unsupported/live-unverified capabilities explicit. No fake Teradata success.
+- Treat audit ledgers as sensitive durable budget/replay state; do not discard casually.

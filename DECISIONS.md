@@ -40,3 +40,58 @@
 14. **Bounded benchmark scope.** Three profiles and scenarios establish observable
     symptoms and known causes. No background scheduler, SQL diagnostic gateway, agents,
     RAG, GraphRAG, MCP business tools, or agent scoring is part of this milestone.
+
+15. **Storage-neutral async analytics port.** Core defines AnalyticsBackend and shared
+    typed contracts; vendor adapters live in database infrastructure. PostgreSQL uses
+    async psycopg. Official teradatasql is optional and its blocking driver runs outside
+    the event loop. No orchestration code imports vendor implementations.
+16. **Conservative SQL subset plus independent database controls.** Parse explicit
+    dialects with SQLGlot, resolve physical sources by scope, allow only reviewed AST
+    nodes/functions/casts, bind values, qualify identifiers, enforce read-only roles,
+    transactions, timeouts and bounded rows/bytes. Unknown syntax fails closed.
+17. **Honest Teradata capabilities.** Driver-backed query/ColumnsV/profile/EXPLAIN paths
+    exist but all are live unverified. SELECT-only account attestation is required;
+    effective-role introspection is not implemented. Unsupported dependency catalog
+    lookup fails explicitly; unavailable metadata fields are null.
+18. **MCP is transport, not authorization.** Use official SDK low-level servers with
+    typed schemas and structured replies. Authenticate a provisioned application token
+    from request metadata and authorize through trusted permissions inside every server.
+    Hints and caller arguments cannot grant permissions. Default permissions are empty.
+19. **Durable local gateway state.** Lock-protected append-only audit records also back
+    per-principal/investigation reservations and request replay protection. This keeps
+    control state separate from source data without adding a service or speculative
+    database schema. Size/rotation, distributed quotas and ownership admission are
+    explicit future operational boundaries.
+20. **Local transport now, remote extension explicitly.** Discover through a typed
+    transport interface and trusted name-to-permission mapping. Validate schemas and
+    correlation; reject remote schema references. Stdio is working/tested; HTTP/TLS/OAuth
+    deployment must not be inferred from the extension interface.
+21. **Public technical keyword corpus.** Implement a small real keyword index over
+    three packaged documents to fulfill retrieval-tool contracts without exposing
+    evaluator files or pretending vector/graph retrieval has shipped.
+
+22. **Deadlines include synchronous preparation.** Use elapsed monotonic time, check
+    admission after file reservation and before success, and classify output defects
+    separately. Asyncio cannot preempt synchronous filesystem calls; cleanup may outlast
+    the response deadline. Never report expired work as successful.
+23. **Concurrency leases follow live owners.** A deadline is not proof of native query
+    completion. Retain a reservation until finish or confirmed owner-process death;
+    preserve worst-case budget charges after crashes. PID reuse/legacy unknown owners
+    fail closed and require operator recovery. File-lock acquisition is bounded.
+24. **Untrusted error content is not an audit field.** Forward known remote codes only,
+    use fixed safe messages and hash unknown requested names. No peer-controlled error
+    text or arbitrary tool-name body belongs in local execution traces.
+25. **Role and catalog correctness require nontrivial fixtures.** Validate column-level
+    write grants independently, preserve composite key ordinality, exclude INCLUDE columns,
+    cover wide tables and reject truncated catalog results rather than fake completeness.
+26. **Native driver cleanup survives repeated cancellation.** Shield/drain Teradata work
+    before releasing its slot. Force verified TLS options, but retain live-unverified
+    capability flags. Driver doubles prove coordination/options only; no Vantage access
+    or effective-grant validation is claimed. Shared encoding belongs in a neutral module.
+27. **Private bootstrap writes are atomic.** Replace .env from a mode-0600 temporary
+    file, reject symlinks and keep transient names ignored. Do not write credentials into
+    an existing public file and rely on a later chmod.
+28. **Review claims must be reproducible.** Add test-all with live settings and a clean
+    source/bootstrap harness using a disposable database container. Separate real-service
+    evidence from explicitly scoped test doubles and keep remaining admission/audit/
+    remote/Teradata gaps visible before starting autonomous agent work.

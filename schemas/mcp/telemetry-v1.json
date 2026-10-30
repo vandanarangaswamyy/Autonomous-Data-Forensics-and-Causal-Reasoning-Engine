@@ -1,0 +1,517 @@
+{
+  "contract_version": 1,
+  "server": "telemetry",
+  "tools": [
+    {
+      "name": "get_pipeline_execution",
+      "description": "Authorized telemetry:read operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "pipeline_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Pipeline Id",
+            "type": "string"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Execution Id"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "context",
+          "pipeline_id"
+        ],
+        "title": "PipelineInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "JsonValue": {},
+          "PipelineExecution": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "title": "Id",
+                "type": "string"
+              },
+              "pipeline_id": {
+                "title": "Pipeline Id",
+                "type": "string"
+              },
+              "schema_version_id": {
+                "title": "Schema Version Id",
+                "type": "string"
+              },
+              "started_at": {
+                "title": "Started At",
+                "type": "string"
+              },
+              "finished_at": {
+                "title": "Finished At",
+                "type": "string"
+              },
+              "status": {
+                "title": "Status",
+                "type": "string"
+              },
+              "input_rows": {
+                "title": "Input Rows",
+                "type": "integer"
+              },
+              "output_rows": {
+                "title": "Output Rows",
+                "type": "integer"
+              },
+              "quality": {
+                "additionalProperties": {
+                  "$ref": "#/$defs/JsonValue"
+                },
+                "title": "Quality",
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "pipeline_id",
+              "schema_version_id",
+              "started_at",
+              "finished_at",
+              "status",
+              "input_rows",
+              "output_rows",
+              "quality"
+            ],
+            "title": "PipelineExecution",
+            "type": "object"
+          },
+          "PipelineResult": {
+            "additionalProperties": false,
+            "properties": {
+              "executions": {
+                "items": {
+                  "$ref": "#/$defs/PipelineExecution"
+                },
+                "title": "Executions",
+                "type": "array"
+              },
+              "truncated": {
+                "title": "Truncated",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "executions",
+              "truncated"
+            ],
+            "title": "PipelineResult",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PipelineResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "get_pipeline_executionReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "telemetry:read"
+      }
+    },
+    {
+      "name": "search_incident_history",
+      "description": "Authorized telemetry:read operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "query": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Severity"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "context",
+          "query"
+        ],
+        "title": "IncidentInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Incident": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "title": "Id",
+                "type": "string"
+              },
+              "occurred_at": {
+                "title": "Occurred At",
+                "type": "string"
+              },
+              "pipeline_id": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Pipeline Id"
+              },
+              "severity": {
+                "title": "Severity",
+                "type": "string"
+              },
+              "code": {
+                "title": "Code",
+                "type": "string"
+              },
+              "details": {
+                "additionalProperties": {
+                  "$ref": "#/$defs/JsonValue"
+                },
+                "title": "Details",
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "occurred_at",
+              "pipeline_id",
+              "severity",
+              "code",
+              "details"
+            ],
+            "title": "Incident",
+            "type": "object"
+          },
+          "IncidentResult": {
+            "additionalProperties": false,
+            "properties": {
+              "incidents": {
+                "items": {
+                  "$ref": "#/$defs/Incident"
+                },
+                "title": "Incidents",
+                "type": "array"
+              },
+              "truncated": {
+                "title": "Truncated",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "incidents",
+              "truncated"
+            ],
+            "title": "IncidentResult",
+            "type": "object"
+          },
+          "JsonValue": {},
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/IncidentResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "search_incident_historyReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "telemetry:read"
+      }
+    }
+  ]
+}

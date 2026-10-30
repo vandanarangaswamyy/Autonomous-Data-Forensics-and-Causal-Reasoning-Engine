@@ -1,0 +1,227 @@
+{
+  "contract_version": 1,
+  "server": "knowledge",
+  "tools": [
+    {
+      "name": "search_technical_documents",
+      "description": "Authorized knowledge:read operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "limit": {
+            "default": 5,
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "context",
+          "query"
+        ],
+        "title": "DocumentInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "DocumentMatch": {
+            "additionalProperties": false,
+            "properties": {
+              "document_id": {
+                "title": "Document Id",
+                "type": "string"
+              },
+              "title": {
+                "title": "Title",
+                "type": "string"
+              },
+              "source_uri": {
+                "title": "Source Uri",
+                "type": "string"
+              },
+              "excerpt": {
+                "title": "Excerpt",
+                "type": "string"
+              },
+              "score": {
+                "title": "Score",
+                "type": "number"
+              }
+            },
+            "required": [
+              "document_id",
+              "title",
+              "source_uri",
+              "excerpt",
+              "score"
+            ],
+            "title": "DocumentMatch",
+            "type": "object"
+          },
+          "DocumentResult": {
+            "additionalProperties": false,
+            "properties": {
+              "matches": {
+                "items": {
+                  "$ref": "#/$defs/DocumentMatch"
+                },
+                "title": "Matches",
+                "type": "array"
+              },
+              "retrieval_method": {
+                "const": "keyword",
+                "default": "keyword",
+                "title": "Retrieval Method",
+                "type": "string"
+              }
+            },
+            "required": [
+              "matches"
+            ],
+            "title": "DocumentResult",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/DocumentResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "search_technical_documentsReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "knowledge:read"
+      }
+    }
+  ]
+}

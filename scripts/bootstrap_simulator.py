@@ -7,12 +7,29 @@ import argparse
 import os
 import secrets
 from pathlib import Path
+from uuid import uuid4
 
 import psycopg
 from atlas_database import schema as s
 from dotenv import dotenv_values
 from psycopg import sql
 from sqlalchemy.engine import URL
+
+
+def write_private_env(path: Path, content: str) -> None:
+    """Never write generated credentials into a pre-existing public or linked file."""
+    if path.is_symlink():
+        raise ValueError("Environment file cannot be a symlink")
+    temporary = path.parent / f".env.{uuid4().hex}.tmp"
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def main() -> None:
@@ -104,8 +121,7 @@ def main() -> None:
         + "\n".join(f"{key}={value}" for key, value in updates.items())
         + "\n"
     )
-    env_path.write_text(content)
-    env_path.chmod(0o600)
+    write_private_env(env_path, content)
     print("Dedicated database and observer created; private connection settings saved in .env.")
 
 

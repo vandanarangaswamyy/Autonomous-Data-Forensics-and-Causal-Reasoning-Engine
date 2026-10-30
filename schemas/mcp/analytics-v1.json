@@ -1,0 +1,1040 @@
+{
+  "contract_version": 1,
+  "server": "analytics",
+  "tools": [
+    {
+      "name": "get_table_schema",
+      "description": "Authorized analytics:schema operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          },
+          "TableRef": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_name": {
+                "default": "public",
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Schema Name",
+                "type": "string"
+              },
+              "table": {
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Table",
+                "type": "string"
+              }
+            },
+            "required": [
+              "table"
+            ],
+            "title": "TableRef",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "table": {
+            "$ref": "#/$defs/TableRef"
+          }
+        },
+        "required": [
+          "context",
+          "table"
+        ],
+        "title": "TableInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "ColumnMetadata": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "data_type": {
+                "title": "Data Type",
+                "type": "string"
+              },
+              "nullable": {
+                "title": "Nullable",
+                "type": "boolean"
+              },
+              "ordinal": {
+                "title": "Ordinal",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "data_type",
+              "nullable",
+              "ordinal"
+            ],
+            "title": "ColumnMetadata",
+            "type": "object"
+          },
+          "TableMetadata": {
+            "additionalProperties": false,
+            "properties": {
+              "reference": {
+                "$ref": "#/$defs/TableRef"
+              },
+              "columns": {
+                "items": {
+                  "$ref": "#/$defs/ColumnMetadata"
+                },
+                "title": "Columns",
+                "type": "array"
+              },
+              "primary_key": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Primary Key"
+              },
+              "indexes": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Indexes"
+              },
+              "estimated_rows": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Estimated Rows"
+              }
+            },
+            "required": [
+              "reference",
+              "columns"
+            ],
+            "title": "TableMetadata",
+            "type": "object"
+          },
+          "TableRef": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_name": {
+                "default": "public",
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Schema Name",
+                "type": "string"
+              },
+              "table": {
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Table",
+                "type": "string"
+              }
+            },
+            "required": [
+              "table"
+            ],
+            "title": "TableRef",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TableMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "get_table_schemaReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "analytics:schema"
+      }
+    },
+    {
+      "name": "execute_readonly_sql",
+      "description": "Authorized analytics:query operation",
+      "inputSchema": {
+        "$defs": {
+          "QueryRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "sql": {
+                "maxLength": 16000,
+                "minLength": 1,
+                "title": "Sql",
+                "type": "string"
+              },
+              "parameters": {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "title": "Parameters",
+                "type": "object"
+              },
+              "timeout_ms": {
+                "default": 3000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              },
+              "row_limit": {
+                "default": 100,
+                "maximum": 1000,
+                "minimum": 1,
+                "title": "Row Limit",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "sql"
+            ],
+            "title": "QueryRequest",
+            "type": "object"
+          },
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "query": {
+            "$ref": "#/$defs/QueryRequest"
+          }
+        },
+        "required": [
+          "context",
+          "query"
+        ],
+        "title": "SQLInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "JsonValue": {},
+          "QueryResult": {
+            "additionalProperties": false,
+            "properties": {
+              "columns": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Columns",
+                "type": "array"
+              },
+              "rows": {
+                "items": {
+                  "items": {
+                    "$ref": "#/$defs/JsonValue"
+                  },
+                  "type": "array"
+                },
+                "title": "Rows",
+                "type": "array"
+              },
+              "truncated": {
+                "default": false,
+                "title": "Truncated",
+                "type": "boolean"
+              },
+              "row_count": {
+                "minimum": 0,
+                "title": "Row Count",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "columns",
+              "rows",
+              "row_count"
+            ],
+            "title": "QueryResult",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/QueryResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "execute_readonly_sqlReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "analytics:query"
+      }
+    },
+    {
+      "name": "profile_column",
+      "description": "Authorized analytics:profile operation",
+      "inputSchema": {
+        "$defs": {
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          },
+          "TableRef": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_name": {
+                "default": "public",
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Schema Name",
+                "type": "string"
+              },
+              "table": {
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Table",
+                "type": "string"
+              }
+            },
+            "required": [
+              "table"
+            ],
+            "title": "TableRef",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "table": {
+            "$ref": "#/$defs/TableRef"
+          },
+          "column": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Column",
+            "type": "string"
+          }
+        },
+        "required": [
+          "context",
+          "table",
+          "column"
+        ],
+        "title": "ProfileInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "ColumnStatistics": {
+            "additionalProperties": false,
+            "properties": {
+              "reference": {
+                "$ref": "#/$defs/TableRef"
+              },
+              "column": {
+                "title": "Column",
+                "type": "string"
+              },
+              "total_rows": {
+                "title": "Total Rows",
+                "type": "integer"
+              },
+              "null_rows": {
+                "title": "Null Rows",
+                "type": "integer"
+              },
+              "distinct_values": {
+                "title": "Distinct Values",
+                "type": "integer"
+              },
+              "minimum": {
+                "$ref": "#/$defs/JsonValue",
+                "default": null
+              },
+              "maximum": {
+                "$ref": "#/$defs/JsonValue",
+                "default": null
+              },
+              "numeric_mean": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Numeric Mean"
+              }
+            },
+            "required": [
+              "reference",
+              "column",
+              "total_rows",
+              "null_rows",
+              "distinct_values"
+            ],
+            "title": "ColumnStatistics",
+            "type": "object"
+          },
+          "JsonValue": {},
+          "TableRef": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_name": {
+                "default": "public",
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Schema Name",
+                "type": "string"
+              },
+              "table": {
+                "maxLength": 128,
+                "minLength": 1,
+                "title": "Table",
+                "type": "string"
+              }
+            },
+            "required": [
+              "table"
+            ],
+            "title": "TableRef",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ColumnStatistics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "profile_columnReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "analytics:profile"
+      }
+    },
+    {
+      "name": "get_query_plan",
+      "description": "Authorized analytics:plan operation",
+      "inputSchema": {
+        "$defs": {
+          "QueryRequest": {
+            "additionalProperties": false,
+            "properties": {
+              "sql": {
+                "maxLength": 16000,
+                "minLength": 1,
+                "title": "Sql",
+                "type": "string"
+              },
+              "parameters": {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "title": "Parameters",
+                "type": "object"
+              },
+              "timeout_ms": {
+                "default": 3000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              },
+              "row_limit": {
+                "default": 100,
+                "maximum": 1000,
+                "minimum": 1,
+                "title": "Row Limit",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "sql"
+            ],
+            "title": "QueryRequest",
+            "type": "object"
+          },
+          "RequestContext": {
+            "additionalProperties": false,
+            "properties": {
+              "investigation_id": {
+                "format": "uuid",
+                "title": "Investigation Id",
+                "type": "string"
+              },
+              "request_id": {
+                "format": "uuid",
+                "title": "Request Id",
+                "type": "string"
+              },
+              "timeout_ms": {
+                "default": 5000,
+                "maximum": 30000,
+                "minimum": 10,
+                "title": "Timeout Ms",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "investigation_id",
+              "request_id"
+            ],
+            "title": "RequestContext",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/$defs/RequestContext"
+          },
+          "query": {
+            "$ref": "#/$defs/QueryRequest"
+          }
+        },
+        "required": [
+          "context",
+          "query"
+        ],
+        "title": "SQLInput",
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "JsonValue": {},
+          "QueryPlan": {
+            "additionalProperties": false,
+            "properties": {
+              "dialect": {
+                "title": "Dialect",
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "executes_query": {
+                "const": false,
+                "default": false,
+                "title": "Executes Query",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "dialect",
+              "plan"
+            ],
+            "title": "QueryPlan",
+            "type": "object"
+          },
+          "ToolError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "maxLength": 100,
+                "minLength": 1,
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 500,
+                "minLength": 1,
+                "title": "Message",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "ToolError",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/QueryPlan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ToolError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "status",
+          "investigation_id",
+          "request_id",
+          "trace_id"
+        ],
+        "title": "get_query_planReply",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "atlas_permission": "analytics:plan"
+      }
+    }
+  ]
+}

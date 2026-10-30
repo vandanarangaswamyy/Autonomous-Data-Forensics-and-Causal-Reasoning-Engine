@@ -1,7 +1,8 @@
 # Architecture
 
-Current status: FastAPI foundation plus the enterprise simulator and fault-injection engine.
-See [simulator architecture and runbook](simulator.md). Other reserved boundaries remain unimplemented.
+Current status: FastAPI foundation, enterprise simulator/fault-injection engine and authorized database/MCP infrastructure.
+See [simulator architecture](simulator.md) and [database/MCP infrastructure](database-mcp.md).
+Other reserved boundaries remain unimplemented.
 
 One uv-managed Python distribution packages atlas_api, atlas_core and atlas_contracts
 from explicit source roots. Avoid independently versioned internal packages until
@@ -22,12 +23,13 @@ Neo4j owns long-term bitemporal knowledge, separate from execution state. Knowle
 assertions require valid-time and transaction-time intervals, immutable provenance and
 supersession history. Current Evidence observation/recording timestamps do not implement
 that graph. Redis is transport/cache, Kafka carries ingestion events, and S3-compatible
-storage holds original documents and evidence. Teradata is behind a pluggable adapter.
+storage holds original documents and evidence. Teradata has an official-driver adapter with explicit live-unverified and unsupported capabilities.
 
 Future diagnostic SQL must pass a dialect-aware parsed policy, use read-only credentials
 and transactions, reject multiple statements/side effects, enforce statement timeouts
 and bounded results. Every allowed, denied or failed tool call requires durable audit
-with investigation/execution IDs. No diagnostic SQL executor is implemented now.
+with investigation/request/trace IDs. This phase implements that boundary with dialect-aware AST
+validation, PostgreSQL observer-role checks, bounded results/timeouts and authorized MCP gateways.
 
 Evidence records include source URI, SHA-256 digest, timestamps and optional execution
 provenance. Supported/rejected hypotheses require evidence IDs; future services must
@@ -68,3 +70,11 @@ business/metadata evidence only. Oracle files stay in a separate evaluator direc
 never database tables or public events. The evaluator must not share its identity or
 private mount with future agents. Outbox/inbox transactions provide replay-safe Kafka
 observations. These operator mutations are not agent diagnostic tools.
+
+MCP servers share typed services and expose separate stdio entrypoints for analytics,
+lineage, telemetry and public technical-document search. Each enforces authorization
+independently of the client gateway. Local transports use the official SDK; remote
+transport is an explicit extension interface requiring separate authentication. Durable
+file audit/budget state lives in .atlas-runtime, separate from simulator evidence and
+.atlas-private evaluator answers. No agent orchestration or multi-user control plane
+is implemented. The public keyword corpus is not vector/GraphRAG infrastructure.

@@ -1,8 +1,8 @@
 # Source file inventory
 
-Complete source inventory after the simulator milestone. The existing foundation files
-were retained or updated; new simulator/evaluation/database modules are included below.
-Ignored .env, .atlas-private, .venv, caches, build artifacts and .git metadata are excluded.
+Complete source inventory after the database/MCP implementation and skeptical review.
+Ignored .env, .atlas-private, .atlas-runtime, .venv, caches, build artifacts and Git metadata
+are excluded.
 
 ```text
 .env.example
@@ -19,7 +19,9 @@ apps/api/src/atlas_api/__init__.py
 apps/api/src/atlas_api/main.py
 apps/web/README.md
 docs/architecture.md
+docs/database-mcp.md
 docs/file-inventory.md
+docs/reviews/database-mcp-audit.md
 docs/simulator-data-model.md
 docs/simulator.md
 evaluation/README.md
@@ -37,9 +39,12 @@ evaluation/src/atlas_evaluation/registry.py
 infrastructure/docker/compose.yaml
 infrastructure/kubernetes/README.md
 packages/contracts/src/atlas_contracts/__init__.py
+packages/contracts/src/atlas_contracts/analytics.py
 packages/contracts/src/atlas_contracts/models.py
 packages/contracts/src/atlas_contracts/simulator_events.py
+packages/contracts/src/atlas_contracts/tools.py
 packages/core/src/atlas_core/__init__.py
+packages/core/src/atlas_core/analytics.py
 packages/core/src/atlas_core/config.py
 packages/core/src/atlas_core/errors.py
 packages/database/README.md
@@ -47,19 +52,43 @@ packages/database/migrations/env.py
 packages/database/migrations/script.py.mako
 packages/database/migrations/versions/0001_enterprise_simulator.py
 packages/database/src/atlas_database/__init__.py
+packages/database/src/atlas_database/analytics/__init__.py
+packages/database/src/atlas_database/analytics/common.py
+packages/database/src/atlas_database/analytics/policy.py
+packages/database/src/atlas_database/analytics/postgres.py
+packages/database/src/atlas_database/analytics/teradata.py
 packages/database/src/atlas_database/connection.py
 packages/database/src/atlas_database/schema.py
 packages/observability/README.md
 pyproject.toml
 schemas/events/simulator-v1.json
+schemas/mcp/analytics-v1.json
+schemas/mcp/knowledge-v1.json
+schemas/mcp/lineage-v1.json
+schemas/mcp/telemetry-v1.json
 scripts/README.md
+scripts/__init__.py
 scripts/bootstrap_simulator.py
+scripts/export_mcp_schemas.py
 scripts/test_simulator_integration.py
+scripts/verify_clean_mcp_setup.py
 services/documents/README.md
 services/graph_memory/README.md
 services/ingestion/README.md
 services/investigation/README.md
 services/mcp/README.md
+services/mcp/src/atlas_mcp/__init__.py
+services/mcp/src/atlas_mcp/audit.py
+services/mcp/src/atlas_mcp/catalog.py
+services/mcp/src/atlas_mcp/client.py
+services/mcp/src/atlas_mcp/gateway.py
+services/mcp/src/atlas_mcp/public_documents/financial-reporting.md
+services/mcp/src/atlas_mcp/public_documents/lineage-operations.md
+services/mcp/src/atlas_mcp/public_documents/payment-ingestion.md
+services/mcp/src/atlas_mcp/security.py
+services/mcp/src/atlas_mcp/server.py
+services/mcp/src/atlas_mcp/services.py
+services/mcp/src/atlas_mcp/transports.py
 services/retrieval/README.md
 services/simulator/README.md
 services/simulator/src/atlas_simulator/__init__.py
@@ -77,10 +106,19 @@ tests/contract/test_outbox.py
 tests/contract/test_simulator_events.py
 tests/fault_injection/README.md
 tests/integration/README.md
+tests/integration/test_analytics_backend.py
 tests/integration/test_simulator_kafka.py
 tests/integration/test_simulator_postgres.py
+tests/mcp/test_contracts.py
+tests/mcp/test_gateway.py
+tests/mcp/test_review_security.py
+tests/mcp/test_stdio.py
 tests/test_foundation.py
+tests/test_metadata_bounds.py
+tests/test_private_setup.py
 tests/test_simulator.py
 tests/test_simulator_cli.py
+tests/test_sql_policy.py
+tests/test_teradata_backend.py
 uv.lock
 ```

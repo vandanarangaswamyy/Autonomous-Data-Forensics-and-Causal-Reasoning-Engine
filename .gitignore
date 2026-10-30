@@ -15,3 +15,5 @@ node_modules/
 
 .atlas-private/
 *.sqlite
+
+.atlas-runtime/

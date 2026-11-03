@@ -111,3 +111,27 @@
     installing a driver, using a double or passing PostgreSQL tests. Local per-investigation
     budgets and single-host audit leases do not supply production tenant admission,
     distributed quotas, token lifecycle or remote transport security. Phase 3 remains deferred.
+32. **Stage Phase 3 at a durable ingestion boundary.** Deliver 3.1 before NLP/embeddings,
+    retrieval and graphs. A declared document kind is not classification, recursive/Markdown
+    ranges are not sentence/SQL-aware NLP, and chunk rebuild is not vector reindexing.
+    Do not present deferred capabilities as completed or fabricate benchmark scores.
+33. **Separate source storage and migrations.** Use an independent knowledge database,
+    non-superuser owner and Alembic history. Store bounded original bytes with versions
+    and jobs in one transaction for this local milestone; S3 would require cross-store
+    recovery and retention design. Do not give this mutation owner to MCP or agents.
+34. **Fence durable workers, rather than assume exactly-once execution.** Serialize each
+    document's changes, claim jobs with SKIP LOCKED, cap attempts and lease duration, and
+    verify current generation/token/lease before publishing. Cancellation leaves work
+    reclaimable. Process exhausted leases without hiding later jobs. No heartbeat or
+    scheduler is implied; expensive NLP needs a reviewed continuation of this contract.
+35. **Keep original text offsets exact.** Avoid lossy normalization in 3.1. Byte hashes,
+    external versions and observation/ingestion times resolve through immutable revisions;
+    chunks cover the decoded source without gaps. Validate processor outputs before
+    atomic publication. Normalization/PDF require explicit offset mappings in 3.2.
+36. **Deletion is a tombstone with chunk removal.** Fence workers and remove derived
+    chunks immediately, retaining originals/revision provenance. Privacy erasure, retention
+    and garbage collection require an explicit future policy; do not call this a purge.
+37. **Measure the implemented operation.** Record a versioned deterministic ingestion
+    fixture, exact runtime and actual throughput. Retrieval and extraction metrics remain
+    unavailable until models, indexes and human-reviewed relevance/entity labels exist.
+    A healthy Neo4j container is not graph integration verification.

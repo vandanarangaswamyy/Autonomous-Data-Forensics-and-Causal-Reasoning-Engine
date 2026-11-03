@@ -24,6 +24,9 @@ def main() -> None:
         "ATLAS_TEST_READER_URL": reader,
         "ATLAS_TEST_KAFKA_BOOTSTRAP": values.get("ATLAS_SIM_KAFKA_BOOTSTRAP") or "127.0.0.1:9092",
     }
+    knowledge = values.get("ATLAS_KNOWLEDGE_DATABASE_URL")
+    if knowledge:
+        environment["ATLAS_TEST_KNOWLEDGE_URL"] = knowledge
     path = "tests" if args.all else "tests/integration"
     raise SystemExit(
         subprocess.call([".venv/bin/pytest", path, "-q" if args.all else "-v"], env=environment)

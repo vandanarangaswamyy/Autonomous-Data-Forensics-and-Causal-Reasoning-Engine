@@ -160,6 +160,7 @@ def main() -> None:
             )
             (checkout / ".env").chmod(0o600)
             environment.pop("POSTGRES_PASSWORD")
+            document_job: str | None = None
             for target in (
                 "setup",
                 "sim-bootstrap",
@@ -167,6 +168,9 @@ def main() -> None:
                 "sim-generate",
                 "mcp-demo",
                 "sim-reset",
+                "documents-bootstrap",
+                "documents-migrate",
+                "documents-work",
             ):
                 result = subprocess.run(
                     ["make", target],
@@ -184,6 +188,53 @@ def main() -> None:
                 if target == "mcp-demo":
                     payload = json.loads(result.stdout[result.stdout.index("{") :])
                     verify_demo_contents(payload)
+                if target == "documents-migrate":
+                    submit_command = [
+                        ".venv/bin/atlas-documents",
+                        "submit",
+                        "services/mcp/src/atlas_mcp/public_documents/payment-ingestion.md",
+                        "--collection",
+                        "clean-checkout",
+                        "--source-uri",
+                        "atlas://docs/payments",
+                        "--source-version",
+                        "v1",
+                        "--kind",
+                        "technical",
+                        "--media-type",
+                        "text/markdown",
+                        "--strategy",
+                        "markdown",
+                        "--observed-at",
+                        "2025-01-01T00:00:00+00:00",
+                    ]
+                    for duplicate in (False, True):
+                        submitted = subprocess.run(
+                            submit_command,
+                            cwd=checkout,
+                            env=environment,
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                        )
+                        if submitted.returncode:
+                            raise RuntimeError("Fresh-checkout document submission failed")
+                        receipt = json.loads(submitted.stdout)
+                        assert receipt["deduplicated"] is duplicate
+                        document_job = receipt["job_id"]
+                if target == "documents-work":
+                    assert document_job
+                    status = subprocess.run(
+                        [".venv/bin/atlas-documents", "status", document_job],
+                        cwd=checkout,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if status.returncode:
+                        raise RuntimeError("Fresh-checkout document status check failed")
+                    assert json.loads(status.stdout)["status"] == "succeeded"
                 print(f"fresh checkout: make {target} passed", flush=True)
         finally:
             if started:

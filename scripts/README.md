@@ -9,3 +9,9 @@
   temporary copy and disposable PostgreSQL container, automatically cleaning up afterward.
 - test_simulator_integration.py --all runs the full suite with live settings (make test-all).
 - export_mcp_schemas.py regenerates the four public versioned MCP descriptor files.
+
+Phase 3 milestone 3.1: `python -m scripts.bootstrap_knowledge` provisions independent
+private knowledge storage; `python -m scripts.test_documents_integration --all` runs
+all suites with actual knowledge/simulator services enabled. `python -m
+scripts.benchmark_ingestion` records actual ingestion throughput, not retrieval quality.
+The clean setup verifier now exercises document submit/dedup/work/status as well as MCP.

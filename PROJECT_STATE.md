@@ -1,5 +1,78 @@
 # Project state
 
+## Current milestone — Phase 3.1 (2026-11-02)
+
+The user authorized staged Phase 3. Completed only the first independently testable
+milestone: durable UTF-8 enterprise source ingestion and provenance segmentation.
+Full NLP, hybrid retrieval and GraphRAG are **not complete**. Stop after 3.1.
+Runbook, architecture, milestone matrix and exact limits: docs/phase-3.md.
+
+Delivered:
+- Typed source/version/job/chunk contracts and DocumentStore port; async PostgreSQL
+  adapter, bounded worker CLI and a separate knowledge database/non-superuser owner.
+- Independent knowledge_0001 migration history: documents, original source blobs,
+  immutable versions, durable jobs and chunks. Simulator migration/schema unchanged.
+- Deterministic IDs, byte/revision hashing, concurrent dedup, incremental updates,
+  explicit source kind/version/URI/observation time and database ingestion time.
+- Fenced leased jobs, SKIP LOCKED claims, bounded backoff/three attempts, expired-worker
+  recovery, stale completion rejection, queue recovery that does not hide ready work.
+- Exact-source Unicode offsets and stable chunk IDs; recursive and Markdown segmentation.
+  Source/config hashes and immutable version references preserve provenance. No lossy
+  normalization or statistical NLP is claimed.
+- Logical deletion removes chunks and fences workers; retained source revisions support
+  provenance and idempotent reprocessing. This is not privacy erasure or vector reindexing.
+- Operator CLI/make targets and private atomic bootstrap. Source mutations/owner settings
+  are not exposed to MCP. Existing Phase 2 tools/security implementation untouched.
+
+Verification:
+- `make format check`: Ruff format/lint passed (111 Python files); strict mypy passed
+  for **80 source files**; default suite **117 passed, 27 skipped, 1 warning in 8.77s**.
+- `uv run --locked python -m scripts.test_documents_integration --all`:
+  **144 passed, 0 failed, 0 skipped, 1 warning in 29.69s**, including all existing Phase
+  1/2 PostgreSQL/Kafka/MCP security cases and all nine new actual PostgreSQL tests.
+- Final `make test-all` also passed **144 tests, 0 skipped, 1 warning in 28.85s**;
+  its existing runner now includes knowledge tests when private settings are provisioned.
+- `make documents-integration`: **9 passed in 1.70s**. Thirteen new unit/contract cases
+  and nine live cases cover IDs, provenance, dedup, versions, parallel claim exclusivity,
+  retries/attempt limits, cancellation recovery, deletion/restore and rebuild idempotency.
+- One existing upstream Starlette/httpx deprecation warning remains. Default skips are
+  the 18 prior live cases plus nine ingestion cases; all pass with real settings enabled.
+- `make infra-up`: PostgreSQL, Redis, Neo4j and Kafka actually healthy. Neo4j graph
+  operations were not implemented/tested; service health does not verify GraphRAG.
+- Independent Alembic drift check, source/wheel build and Compose validation passed.
+- Fresh temporary checkout/virtualenv + disposable PostgreSQL passed existing setup,
+  simulator migration/generation/MCP demo/reset and knowledge bootstrap/migration,
+  actual submission/deduplication/work/status. Disposable container/volume removed.
+- Real ingestion benchmark: fixture ingestion-v1, 100 documents per strategy, 234,190
+  source bytes, offset-v1, one worker, 512-character bound. Recursive: **42.78 docs/s**,
+  600 chunks, p95 **31.77 ms**; Markdown: **33.12 docs/s**, 700 chunks, p95 **40.23 ms**.
+  Exact dataset hash, UTC timestamp and runtime/package versions are recorded in
+  evaluation/results/ingestion-v1.json. These are ingestion measurements only.
+- Intermediate checks exposed missing SQLAlchemy asyncio/greenlet support and new test
+  typing issues; fixed before final passes. No existing dependency versions were upgraded.
+
+Remaining/unverified:
+- PDF/OCR/S3/connectors, normalization with offset maps, spaCy/Hugging Face models,
+  technical entity extraction/resolution/relationships/classification, sentence/SQL/
+  incident-aware chunkers are deferred to 3.2. Eight source kinds are operator-declared,
+  not specialized NLP parsers.
+- VectorStore/pgvector/embeddings/index lifecycle/BM25/RRF/reranking/filtering/query
+  expansion, retrieval MCP extensions and 50+ labeled queries are deferred to 3.3.
+- Neo4j evidence graph, simulator lineage import, bounded graph traversal and graph
+  expansion are deferred to 3.4. No bitemporal agent memory or investigator was added.
+- Recall/MRR/nDCG, retrieval latency and entity precision/recall have **not been measured**;
+  required components/labels do not exist yet. No invented retrieval benchmark results.
+- No Teradata Vector Store integration or compatibility claim. Existing live Teradata
+  Phase 2 limitations remain. Knowledge owner is local operator access, not tenant auth.
+- Local batches require repeated invocation/scheduling for future retries. No heartbeat,
+  production scheduler, object-store recovery, hard purge, retention/GC, global quota
+  or collection-authorized retrieval role exists. Expensive NLP needs a reviewed lease
+  renewal/resource-budget design before integration.
+
+Next boundary: 3.2 extraction on immutable source revisions with explicit model versions,
+confidence/method/offset maps and labeled precision/recall data. Do not start the next
+milestone automatically. Phase 3.1 changes are recorded in the durable-ingestion milestone commit.
+
 ## Completed milestones
 
 ### Foundation and enterprise simulator
@@ -149,12 +222,12 @@ verification-code failures are in docs/reviews/database-mcp-audit.md.
 
 Next steps: obtain a real Vantage test environment and resolve unsupported mappings;
 authorize scoped principal/investigation admission plus durable quota/audit operations
-before untrusted multi-user use. No Phase 3 work is authorized by this review.
+before untrusted multi-user use. That Phase 2 review did not authorize Phase 3; the later user request authorized staged Phase 3 above.
 
 ## Current local state
 
 PostgreSQL host port 55432; Kafka 127.0.0.1:9092. Simulator remains on its seed-42 small
-baseline. `.env` holds private local owner/observer credentials. `.atlas-private` holds
+baseline. `.env` holds private local simulator owner/observer and separate knowledge-owner credentials. `.atlas-private` holds
 evaluator records. `.atlas-runtime` contains mode-0600 application audit/budget ledgers
 inside a mode-0700 directory. All are ignored; no secrets/runtime state belong in Git.
 No unrelated project was modified. Source inventory: docs/file-inventory.md.
@@ -184,8 +257,9 @@ No unrelated project was modified. Source inventory: docs/file-inventory.md.
 
 ## Next integration boundary
 
-Future control-plane admission can bind authenticated principals to investigations and
-use these typed analytics/tool interfaces for durable execution. Keep evidence separate
-from tool/audit state and evaluator ground truth. Add distributed budget/audit retention,
-remote transport authorization and live Vantage contract tests only in an authorized
-phase. Stop here. Runbook: docs/database-mcp.md; decisions: DECISIONS.md.
+Phase 3.2 is the next staged implementation boundary; see docs/phase-3.md. Add typed
+NLP outputs and source-offset maps before embeddings/retrieval or graph construction.
+Keep investigation state, source knowledge and evaluator ground truth separate.
+Phase 2 admission/audit/remote/Teradata gaps remain explicit and require separate work.
+Stop after the completed Phase 3.1 milestone; no autonomous investigation engine or
+long-term bitemporal agent memory is implemented.

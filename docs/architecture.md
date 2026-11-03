@@ -78,3 +78,11 @@ transport is an explicit extension interface requiring separate authentication. 
 file audit/budget state lives in .atlas-runtime, separate from simulator evidence and
 .atlas-private evaluator answers. No agent orchestration or multi-user control plane
 is implemented. The public keyword corpus is not vector/GraphRAG infrastructure.
+
+Phase 3 is staged. Milestone 3.1 adds a separate knowledge-source database/migration
+history, a DocumentStore port, async PostgreSQL job adapter and document worker/CLI.
+Original bytes and immutable revisions are committed with jobs; fenced worker generations
+publish provenance-checked chunks. No Phase 2 MCP implementation changed. See
+[Phase 3 boundaries and runbook](phase-3.md) for completed ingestion scope and deferred
+PDF/NLP/pgvector/Neo4j/retrieval work. Evidence source storage is separate from future
+investigation control state and evaluator oracles; it is not bitemporal agent memory.

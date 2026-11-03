@@ -1,7 +1,7 @@
 # Source file inventory
 
-Complete source inventory after the database/MCP implementation and skeptical review.
-Ignored .env, .atlas-private, .atlas-runtime, .venv, caches, build artifacts and Git metadata
+Complete source inventory after Phase 3 milestone 3.1.
+Ignored .env, .atlas-private, .atlas-runtime, .venv, caches, builds and Git metadata
 are excluded.
 
 ```text
@@ -21,6 +21,7 @@ apps/web/README.md
 docs/architecture.md
 docs/database-mcp.md
 docs/file-inventory.md
+docs/phase-3.md
 docs/reviews/database-mcp-audit.md
 docs/simulator-data-model.md
 docs/simulator.md
@@ -31,6 +32,7 @@ evaluation/faults/duplicate_transactions.json
 evaluation/faults/incorrect_join.json
 evaluation/faults/missing_partitions.json
 evaluation/faults/schema_drift.json
+evaluation/results/ingestion-v1.json
 evaluation/scenarios/a_missing_partitions.json
 evaluation/scenarios/b_incorrect_join.json
 evaluation/scenarios/c_duplicate_events.json
@@ -38,16 +40,24 @@ evaluation/src/atlas_evaluation/__init__.py
 evaluation/src/atlas_evaluation/registry.py
 infrastructure/docker/compose.yaml
 infrastructure/kubernetes/README.md
+knowledge-alembic.ini
 packages/contracts/src/atlas_contracts/__init__.py
 packages/contracts/src/atlas_contracts/analytics.py
+packages/contracts/src/atlas_contracts/documents.py
 packages/contracts/src/atlas_contracts/models.py
 packages/contracts/src/atlas_contracts/simulator_events.py
 packages/contracts/src/atlas_contracts/tools.py
 packages/core/src/atlas_core/__init__.py
 packages/core/src/atlas_core/analytics.py
 packages/core/src/atlas_core/config.py
+packages/core/src/atlas_core/documents.py
 packages/core/src/atlas_core/errors.py
 packages/database/README.md
+packages/database/knowledge_migrations/__init__.py
+packages/database/knowledge_migrations/env.py
+packages/database/knowledge_migrations/script.py.mako
+packages/database/knowledge_migrations/versions/0001_sources.py
+packages/database/knowledge_migrations/versions/__init__.py
 packages/database/migrations/env.py
 packages/database/migrations/script.py.mako
 packages/database/migrations/versions/0001_enterprise_simulator.py
@@ -58,6 +68,8 @@ packages/database/src/atlas_database/analytics/policy.py
 packages/database/src/atlas_database/analytics/postgres.py
 packages/database/src/atlas_database/analytics/teradata.py
 packages/database/src/atlas_database/connection.py
+packages/database/src/atlas_database/documents.py
+packages/database/src/atlas_database/documents_schema.py
 packages/database/src/atlas_database/schema.py
 packages/observability/README.md
 pyproject.toml
@@ -68,11 +80,19 @@ schemas/mcp/lineage-v1.json
 schemas/mcp/telemetry-v1.json
 scripts/README.md
 scripts/__init__.py
+scripts/benchmark_ingestion.py
+scripts/bootstrap_knowledge.py
 scripts/bootstrap_simulator.py
 scripts/export_mcp_schemas.py
+scripts/test_documents_integration.py
 scripts/test_simulator_integration.py
 scripts/verify_clean_mcp_setup.py
 services/documents/README.md
+services/documents/src/atlas_documents/__init__.py
+services/documents/src/atlas_documents/chunking.py
+services/documents/src/atlas_documents/cli.py
+services/documents/src/atlas_documents/settings.py
+services/documents/src/atlas_documents/worker.py
 services/graph_memory/README.md
 services/ingestion/README.md
 services/investigation/README.md
@@ -104,9 +124,11 @@ tests/conftest.py
 tests/contract/README.md
 tests/contract/test_outbox.py
 tests/contract/test_simulator_events.py
+tests/documents/test_chunking.py
 tests/fault_injection/README.md
 tests/integration/README.md
 tests/integration/test_analytics_backend.py
+tests/integration/test_documents.py
 tests/integration/test_simulator_kafka.py
 tests/integration/test_simulator_postgres.py
 tests/mcp/test_contracts.py

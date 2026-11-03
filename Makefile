@@ -48,3 +48,13 @@ mcp-schemas:
 .PHONY: test-all
 test-all:
 	$(UV) run --locked python scripts/test_simulator_integration.py --all
+
+.PHONY: documents-bootstrap documents-migrate documents-work documents-integration
+documents-bootstrap:
+	$(UV) run --locked python -m scripts.bootstrap_knowledge
+documents-migrate:
+	$(UV) run --locked alembic -c knowledge-alembic.ini upgrade head
+documents-work:
+	$(UV) run --locked atlas-documents work --max-jobs 100
+documents-integration:
+	$(UV) run --locked python -m scripts.test_documents_integration

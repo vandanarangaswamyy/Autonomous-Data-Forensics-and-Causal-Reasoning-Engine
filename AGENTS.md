@@ -44,3 +44,16 @@ Database/MCP rules:
   SDK stdio tests. Driver doubles do not establish live Teradata compatibility.
 - Keep unsupported/live-unverified capabilities explicit. No fake Teradata success.
 - Treat audit ledgers as sensitive durable budget/replay state; do not discard casually.
+
+Phase 3 rules:
+- Read docs/phase-3.md before knowledge-source/NLP/retrieval work. Milestone 3.1 is
+  implemented; stop there unless a later user task authorizes continuing.
+- Knowledge and simulator migrations/databases are independent; never use simulator
+  observer credentials or evaluator files as an ingestion corpus.
+- Preserve immutable bytes/version provenance and exact character-offset semantics.
+  Normalization/PDF must add explicit offset maps rather than silently changing offsets.
+- Preserve leased-job generation/token fencing, bounded retries and atomic publication.
+- `delete` is a retained-provenance tombstone, not hard purge; `reprocess` rebuilds chunks,
+  not embeddings. Do not claim deferred NLP, graph or vector operations are implemented.
+- Run `make documents-integration` and the all-service runner documented in docs/phase-3.md.
+  Benchmarks must distinguish measured ingestion performance from retrieval/NLP quality.

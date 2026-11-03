@@ -1,0 +1,40 @@
+{
+  "benchmark": "ingestion-v1",
+  "dataset_sha256": "0de11339353fb46c9f3c01fb6b31e5adc77a8ba8837b1fe16ae9e8d7c550a310",
+  "source_bytes": 234190,
+  "algorithm": "offset-v1",
+  "recorded_at": "2026-11-03T00:40:18.653194+00:00",
+  "python": "3.12.12",
+  "platform": "macOS-15.6.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "postgresql": "17.11 (Debian 17.11-1.pgdg12+2)",
+  "sqlalchemy": "2.0.55",
+  "psycopg": "3.3.6",
+  "models": [],
+  "workers": 1,
+  "results": [
+    {
+      "strategy": "recursive",
+      "max_chars": 512,
+      "documents": 100,
+      "chunks": 600,
+      "elapsed_seconds": 2.337662790901959,
+      "documents_per_second": 42.777769483774094,
+      "chunks_per_second": 256.6666169026446,
+      "end_to_end_ms_p50": 24.48199992068112,
+      "end_to_end_ms_p95": 31.772082904353738
+    },
+    {
+      "strategy": "markdown",
+      "max_chars": 512,
+      "documents": 100,
+      "chunks": 700,
+      "elapsed_seconds": 3.0189868749585003,
+      "documents_per_second": 33.12369484924462,
+      "chunks_per_second": 231.86586394471237,
+      "end_to_end_ms_p50": 29.465666972100735,
+      "end_to_end_ms_p95": 40.2257910463959
+    }
+  ],
+  "scope": "Local PostgreSQL submit + segment + commit + status; excludes migration/setup. No retrieval or NLP metrics."
+}

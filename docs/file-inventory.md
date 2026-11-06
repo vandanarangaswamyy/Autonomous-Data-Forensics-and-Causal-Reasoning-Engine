@@ -6,6 +6,7 @@ are excluded.
 
 ```text
 .dockerignore
+.gitattributes
 .env.example
 .gitignore
 .pre-commit-config.yaml

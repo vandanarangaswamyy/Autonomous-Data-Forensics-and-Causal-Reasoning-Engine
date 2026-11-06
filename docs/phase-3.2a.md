@@ -252,6 +252,7 @@ uv.lock
 Created:
 
 ```text
+.gitattributes
 .dockerignore
 docs/phase-3.2a.md
 evaluation/nlp/source-v1/encrypted.pdf

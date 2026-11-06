@@ -15,3 +15,9 @@ private knowledge storage; `python -m scripts.test_documents_integration --all` 
 all suites with actual knowledge/simulator services enabled. `python -m
 scripts.benchmark_ingestion` records actual ingestion throughput, not retrieval quality.
 The clean setup verifier now exercises document submit/dedup/work/status as well as MCP.
+
+Phase 3.2a: `python -m scripts.evaluate_source_extraction` evaluates handwritten page/
+span/unsupported-status labels using the real isolated PDF parser. Build it first with
+`make pdf-parser-build`. `build_pdf_fixtures` authors fixtures from literal text without
+running extraction; regeneration changes random encrypted bytes and requires rerunning
+evaluation. Entity/relationship/resolution metrics remain unavailable in this increment.

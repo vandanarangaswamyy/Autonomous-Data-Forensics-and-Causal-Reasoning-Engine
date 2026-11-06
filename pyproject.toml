@@ -15,6 +15,7 @@ dependencies = [
     "mcp>=1.26,<2",
     "sqlglot>=28,<31",
     "jsonschema>=4.23,<5",
+    "pypdf==6.21.4",
 ]
 
 [project.optional-dependencies]

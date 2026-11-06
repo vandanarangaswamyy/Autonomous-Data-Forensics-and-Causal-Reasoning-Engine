@@ -63,6 +63,7 @@ jobs = Table(
     Column("available_at", DateTime(timezone=True), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("error_code", String(50)),
+    Column("extraction_config", JSON),
     ForeignKeyConstraint(
         ["document_id", "version"], ["document_versions.document_id", "document_versions.version"]
     ),
@@ -71,6 +72,25 @@ jobs = Table(
     CheckConstraint("attempts >= 0 AND attempts <= 3"),
 )
 Index("ix_ingestion_jobs_claim", jobs.c.status, jobs.c.available_at, jobs.c.lease_until)
+extractions = Table(
+    "source_extractions",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("document_id", String(36), nullable=False),
+    Column("version", Integer, nullable=False),
+    Column("source_sha256", String(64), ForeignKey("source_blobs.sha256"), nullable=False),
+    Column("config_sha256", String(64), nullable=False),
+    Column("artifact_sha256", String(64), nullable=False),
+    Column("processed_at", DateTime(timezone=True), nullable=False),
+    Column("artifact", JSON, nullable=False),
+    Column("chunk_manifest", JSON, nullable=False),
+    ForeignKeyConstraint(
+        ["document_id", "version"], ["document_versions.document_id", "document_versions.version"]
+    ),
+    UniqueConstraint("document_id", "version", "config_sha256"),
+    UniqueConstraint("document_id", "version", "id", name="uq_extraction_reference"),
+)
+Index("ix_source_extractions_version", extractions.c.document_id, extractions.c.version)
 chunks = Table(
     "document_chunks",
     metadata,
@@ -83,6 +103,12 @@ chunks = Table(
     Column("section_path", JSON, nullable=False),
     Column("content_sha256", String(64), nullable=False),
     Column("processor_sha256", String(64), nullable=False),
+    Column("extraction_id", String(36)),
+    ForeignKeyConstraint(
+        ["document_id", "version", "extraction_id"],
+        ["source_extractions.document_id", "source_extractions.version", "source_extractions.id"],
+        name="fk_chunk_extraction_version",
+    ),
     ForeignKeyConstraint(
         ["document_id", "version"], ["document_versions.document_id", "document_versions.version"]
     ),

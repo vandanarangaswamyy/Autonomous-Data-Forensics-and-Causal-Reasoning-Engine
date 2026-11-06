@@ -135,3 +135,24 @@
     fixture, exact runtime and actual throughput. Retrieval and extraction metrics remain
     unavailable until models, indexes and human-reviewed relevance/entity labels exist.
     A healthy Neo4j container is not graph integration verification.
+38. **Split 3.2 at a verified source artifact.** Deliver PDF extraction, normalization
+    mapping and durable publication before semantic NLP. DocumentExtractor is real;
+    do not add empty entity/model classes or report NLP scores for absent extractors.
+39. **Isolate untrusted PDF work in Linux.** macOS rejected address-space/data limits
+    during verification. Use an ephemeral resource-limited container with pinned base
+    digest/pypdf, no network/mounts or inherited credentials; runtime never pulls an
+    image. This operational boundary has an explicit resource/isolation reason and
+    reuses the existing job system. Terminate/reap both attach client and container.
+40. **Keep normalized and extracted coordinate frames separate.** Preserve legacy
+    source/version/chunk identities. Store compact character mapping runs and page
+    boundaries with explicit unavailable PDF coordinates; avoid lossy case/spelling
+    normalization. Simple layout text does not establish structured table semantics.
+41. **Successful extraction history is append-only.** Bind source/version/config and
+    immutable manifest, reject non-deterministic replacement, use a database mutation
+    guard, and publish artifact/chunks/job success atomically. Config changes require
+    explicit reprocessing. Deletion removes active visibility but retains history.
+    Failed attempts remain ordinary job status in 3.2a; do not claim an NLP run registry.
+42. **Evaluate authored source truth separately from NLP truth.** Record page text,
+    mapping and unsupported-status scores against literal manual labels, including
+    inline images that exposed a real detection defect. Mark entity/relationship and
+    resolution metrics unavailable until 3.2b has independently labeled predictions.

@@ -86,3 +86,9 @@ publish provenance-checked chunks. No Phase 2 MCP implementation changed. See
 [Phase 3 boundaries and runbook](phase-3.md) for completed ingestion scope and deferred
 PDF/NLP/pgvector/Neo4j/retrieval work. Evidence source storage is separate from future
 investigation control state and evaluator oracles; it is not bitemporal agent memory.
+
+Phase 3.2a adds typed source extraction artifacts, mapped normalization and immutable
+publication through the same ingestion jobs. PDF parsing uses ephemeral Linux containers
+for enforceable memory/CPU limits; PostgreSQL retains successful artifact/config/page/
+chunk provenance with an append-only guard. No semantic NLP or graph component is
+implied. See [verified 3.2a boundary](phase-3.2a.md); finish 3.2b before retrieval work.

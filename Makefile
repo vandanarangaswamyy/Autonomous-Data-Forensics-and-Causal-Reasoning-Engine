@@ -58,3 +58,7 @@ documents-work:
 	$(UV) run --locked atlas-documents work --max-jobs 100
 documents-integration:
 	$(UV) run --locked python -m scripts.test_documents_integration
+
+.PHONY: pdf-parser-build
+pdf-parser-build:
+	docker build -f infrastructure/docker/pdf-parser/Dockerfile -t atlas-pdf-parser:6.21.4 .

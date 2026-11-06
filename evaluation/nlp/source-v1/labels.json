@@ -1,0 +1,23 @@
+{
+  "version": "source-v1",
+  "annotation": "Manually specified text/page and source-offset labels from fixture authorship; no extractor predictions used.",
+  "pdfs": [
+    {"file": "retail.pdf", "pages": ["ATLAS Retail\nTable public.orders stores payment totals.", "Pipeline ingestion\nPipeline ingest consumes payment_events."]},
+    {"file": "incident.pdf", "pages": ["Incident INC-2042\nThe ingest pipeline missed a partition.", "Deployment DEP-108\nThe payments service was restarted.", "Resolution\nEvidence is insufficient to establish causality."]},
+    {"file": "table.pdf", "pages": ["Revenue report\nRegion Revenue\nEU 120\nUS 250"]}
+  ],
+  "unsupported": [
+    {"file": "scanned.pdf", "code": "ocr_required"},
+    {"file": "inline-scanned.pdf", "code": "ocr_required"},
+    {"file": "encrypted.pdf", "code": "encrypted_pdf"},
+    {"file": "malformed.pdf", "code": "malformed_pdf"}
+  ],
+  "normalization": [
+    {"source": "A\r\nB", "normalized": "A\nB", "start": 1, "end": 2, "source_start": 1, "source_end": 3},
+    {"source": "A\rB", "normalized": "A\nB", "start": 1, "end": 2, "source_start": 1, "source_end": 2},
+    {"source": "A B", "normalized": "A B", "start": 1, "end": 2, "source_start": 1, "source_end": 2},
+    {"source": "é\r\n🙂", "normalized": "é\n🙂", "start": 2, "end": 3, "source_start": 3, "source_end": 4},
+    {"source": "A\r\nB\r\nC", "normalized": "A\nB\nC", "start": 1, "end": 4, "source_start": 1, "source_end": 6},
+    {"source": "abc", "normalized": "abc", "start": 0, "end": 3, "source_start": 0, "source_end": 3}
+  ]
+}

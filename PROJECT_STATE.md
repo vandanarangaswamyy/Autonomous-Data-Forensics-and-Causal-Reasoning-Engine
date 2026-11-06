@@ -1,6 +1,53 @@
 # Project state
 
-## Current milestone — Phase 3.1 (2026-11-02)
+## Current increment — Phase 3.2a (2026-11-05)
+
+Phase 3.2 remains **PARTIAL**. Per the user-authorized split, completed source extraction,
+normalization mapping and durable artifact publication only. Stop before 3.2b technical
+NLP/resolution/relationships. Recorded in the Phase 3.2a source-extraction commit after user-authorized publication. Baseline inspected: 835666a.
+Full scope, exact commands, architecture and limitations: docs/phase-3.2a.md.
+
+- Pinned pypdf 6.21.4, multi-page machine-readable extraction, layout text, numbered
+  pages, explicit OCR-required/encrypted/malformed statuses. Original PDF coordinates
+  are unavailable; offsets refer only to extracted Unicode text.
+- Typed DocumentExtractor/ExtractionArtifact, conservative identity/line-ending maps,
+  bounded pages/text/map complexity, and preserved legacy text chunk IDs.
+- PDF parsing runs in ephemeral Linux containers: pinned base image, 512 MiB, one CPU,
+  no network/mounts, non-root/read-only, bounded runtime/output and verified cleanup.
+  macOS native memory-limit calls failed; no unsafe native fallback was retained.
+- Additive knowledge_0002/0003 migrations, immutable successful artifacts/configuration/
+  manifests and composite chunk FK. Database trigger blocks history update/deletion.
+  Source/version/chunk IDs survive an upgrade populated with Phase 3.1 data.
+- Same durable jobs/leases/retries, transactional artifact+chunk publication, stale
+  fencing, active/history projections and tombstone behavior. CLI processing/inspection/
+  explicit normalizer upgrade/deletion exercised against actual local storage.
+- Complete `make format check test-all`: **169 passed, 0 skipped, 1 warning in 36.57s**
+  with actual PostgreSQL/Kafka/MCP and isolated PDF runtime. Focused document/runtime
+  integrations: **21 passed in 8.02s**. Default suite: **130 passed, 39 skipped,
+  1 warning in 9.71s**; all service skips passed in the full run. Existing warning:
+  Starlette/httpx TestClient deprecation. Ruff (122 files) / strict mypy (91 files) pass.
+- Migration drift check, source/wheel builds and clean-checkout setup/migrations pass.
+  Test seams are labeled; no fake PostgreSQL/PDF-driver success is used.
+- Authored source-v1 corpus: seven PDFs, six readable pages, four unsupported examples,
+  six normalization span labels. Evaluation: page text **6/6**, source spans **6/6**,
+  unsupported statuses **4/4**. Readable-PDF p50 **353.72 ms**, max **375.31 ms**.
+  Exact labels/bytes hash, parser image ID/runtime/config are in
+  evaluation/results/source-extraction-v1.json. These are source-fidelity metrics.
+
+Missing/unverified: spaCy/Transformers, semantic NLP contracts, enterprise/SQL entities,
+canonical entities/candidates/decisions/relationships/model registry, classification,
+model-inferred claim handling and their labeled corpus. **Entity/relationship precision,
+recall/F1, resolution/ambiguity accuracy and per-type metrics are unavailable.** Do not
+claim Phase 3.2 complete or interpret source extraction scores as NLP scores. Complex
+PDF layout/OCR, visual accuracy and Windows deployment are not verified. Failed attempts
+use job status; immutable per-attempt NLP histories remain deferred. Inspection has
+explicit ten-row/2 MB bounds; pagination, hard purge, tenant authorization and production
+scheduler/retention still require future work. Existing Phase 2 security code is unchanged.
+
+Next: complete 3.2b on immutable source artifacts before Phase 3.3 retrieval. No Neo4j,
+vector search, LangGraph, autonomous investigator or bitemporal memory added.
+
+## Phase 3.1 baseline (2026-11-02)
 
 The user authorized staged Phase 3. Completed only the first independently testable
 milestone: durable UTF-8 enterprise source ingestion and provenance segmentation.
@@ -257,9 +304,8 @@ No unrelated project was modified. Source inventory: docs/file-inventory.md.
 
 ## Next integration boundary
 
-Phase 3.2 is the next staged implementation boundary; see docs/phase-3.md. Add typed
-NLP outputs and source-offset maps before embeddings/retrieval or graph construction.
-Keep investigation state, source knowledge and evaluator ground truth separate.
-Phase 2 admission/audit/remote/Teradata gaps remain explicit and require separate work.
-Stop after the completed Phase 3.1 milestone; no autonomous investigation engine or
-long-term bitemporal agent memory is implemented.
+Complete Phase 3.2b technical NLP/entity resolution/relationships and their labeled
+precision/recall/resolution evaluation before Phase 3.3 embeddings/hybrid retrieval.
+Read docs/phase-3.2a.md for the verified increment and remaining contracts/tables.
+Stop after 3.2a in this task. Preserve source provenance, durable fencing and Phase 2
+security. No investigator or long-term bitemporal agent memory exists.

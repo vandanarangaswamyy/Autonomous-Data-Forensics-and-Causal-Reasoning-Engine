@@ -27,6 +27,7 @@ def main() -> None:
     knowledge = values.get("ATLAS_KNOWLEDGE_DATABASE_URL")
     if knowledge:
         environment["ATLAS_TEST_KNOWLEDGE_URL"] = knowledge
+    environment["ATLAS_TEST_PDF_PARSER"] = "1"
     path = "tests" if args.all else "tests/integration"
     raise SystemExit(
         subprocess.call([".venv/bin/pytest", path, "-q" if args.all else "-v"], env=environment)

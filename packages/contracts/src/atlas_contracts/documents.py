@@ -10,6 +10,8 @@ from uuid import UUID, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from atlas_contracts.extraction_config import ExtractionConfig
+
 DOCUMENT_NAMESPACE = UUID("8a572983-b563-4ce4-b7e8-7837a48fc6b5")
 MAX_SOURCE_BYTES = 1_000_000
 
@@ -34,7 +36,7 @@ class SourceDescriptor(IngestionModel):
     source_uri: str = Field(min_length=1, max_length=1000)
     source_version: str = Field(min_length=1, max_length=200)
     kind: DocumentKind
-    media_type: str = Field(pattern=r"^(text/plain|text/markdown|application/sql)$")
+    media_type: str = Field(pattern=r"^(text/plain|text/markdown|application/sql|application/pdf)$")
     observed_at: datetime
 
     @field_validator("source_uri")
@@ -142,6 +144,7 @@ class Job(IngestionModel):
     descriptor: SourceDescriptor
     content: bytes = Field(repr=False)
     chunking: ChunkConfig
+    extraction_config: ExtractionConfig | None = None
 
 
 class IngestionError(Exception):

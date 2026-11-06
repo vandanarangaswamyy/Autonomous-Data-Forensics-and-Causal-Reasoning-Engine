@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+.atlas-private
+.atlas-runtime
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+dist
+build
+node_modules

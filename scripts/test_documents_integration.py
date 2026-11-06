@@ -16,6 +16,7 @@ def main() -> None:
     if not url:
         raise SystemExit("Run make documents-bootstrap and make documents-migrate first")
     environment = {**os.environ, "ATLAS_TEST_KNOWLEDGE_URL": url}
+    environment["ATLAS_TEST_PDF_PARSER"] = "1"
     if args.all:
         required = {
             "ATLAS_TEST_POSTGRES_URL": "ATLAS_SIM_DATABASE_URL",
@@ -33,7 +34,14 @@ def main() -> None:
         subprocess.call(
             [
                 ".venv/bin/pytest",
-                "tests" if args.all else "tests/integration/test_documents.py",
+                *(
+                    ["tests"]
+                    if args.all
+                    else [
+                        "tests/integration/test_documents.py",
+                        "tests/integration/test_pdf_runtime.py",
+                    ]
+                ),
                 "-q",
             ],
             env=environment,

@@ -46,8 +46,8 @@ Database/MCP rules:
 - Treat audit ledgers as sensitive durable budget/replay state; do not discard casually.
 
 Phase 3 rules:
-- Read docs/phase-3.md before knowledge-source/NLP/retrieval work. Milestone 3.1 is
-  implemented; stop there unless a later user task authorizes continuing.
+- Read docs/phase-3.md before knowledge-source/NLP/retrieval work. Milestones 3.1 and source-extraction increment 3.2a are
+  implemented; read docs/phase-3.2a.md and stop there unless a later user task continues.
 - Knowledge and simulator migrations/databases are independent; never use simulator
   observer credentials or evaluator files as an ingestion corpus.
 - Preserve immutable bytes/version provenance and exact character-offset semantics.
@@ -57,3 +57,8 @@ Phase 3 rules:
   not embeddings. Do not claim deferred NLP, graph or vector operations are implemented.
 - Run `make documents-integration` and the all-service runner documented in docs/phase-3.md.
   Benchmarks must distinguish measured ingestion performance from retrieval/NLP quality.
+
+- PDF runtime requires an explicitly built local parser image. Keep the pinned revision,
+  no-network/no-mount/resource limits and cleanup verification. No native permissive fallback.
+- Preserve mapped normalization and append-only artifact/config history. Source-fidelity
+  metrics do not establish entity/relationship extraction or resolution accuracy.

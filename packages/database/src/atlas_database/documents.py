@@ -1,6 +1,7 @@
 """PostgreSQL durable ingestion queue with document locks and fenced worker leases."""
 
 import hashlib
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -16,6 +17,8 @@ from atlas_contracts.documents import (
     SourceDescriptor,
     SourceSubmission,
 )
+from atlas_contracts.extraction import ExtractionArtifact, ExtractionConfig
+from pydantic import ValidationError
 from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -117,7 +120,13 @@ class PostgreSQLDocumentStore:
                 .where(s.documents.c.id == document_id)
                 .values(version=version, generation=generation, deleted=False)
             )
-            job_id = await self._enqueue(c, document_id, version, generation)
+            job_id = await self._enqueue(
+                c,
+                document_id,
+                version,
+                generation,
+                ExtractionConfig() if descriptor.media_type == "application/pdf" else None,
+            )
             return IngestionReceipt(
                 document_id=descriptor.document_id,
                 version=version,
@@ -126,7 +135,12 @@ class PostgreSQLDocumentStore:
             )
 
     async def _enqueue(
-        self, c: AsyncConnection, document_id: str, version: int, generation: int
+        self,
+        c: AsyncConnection,
+        document_id: str,
+        version: int,
+        generation: int,
+        extraction_config: ExtractionConfig | None = None,
     ) -> UUID:
         await c.execute(
             update(s.jobs)
@@ -147,6 +161,9 @@ class PostgreSQLDocumentStore:
                 attempts=0,
                 created_at=func.now(),
                 available_at=func.now(),
+                extraction_config=extraction_config.model_dump(mode="json")
+                if extraction_config
+                else None,
             )
         )
         return job_id
@@ -239,6 +256,9 @@ class PostgreSQLDocumentStore:
                 descriptor=SourceDescriptor.model_validate(version["descriptor"]),
                 content=bytes(version["content"]),
                 chunking=ChunkConfig.model_validate(version["chunking"]),
+                extraction_config=ExtractionConfig.model_validate(row["extraction_config"])
+                if row["extraction_config"]
+                else None,
             )
 
     async def _owned(self, c: AsyncConnection, job: Job) -> bool:
@@ -268,7 +288,9 @@ class PostgreSQLDocumentStore:
             )
         ).first() is not None
 
-    async def complete(self, job: Job, chunks: list[Chunk]) -> bool:
+    async def complete(
+        self, job: Job, chunks: list[Chunk], artifact: ExtractionArtifact | None = None
+    ) -> bool:
         async with self.transaction() as c:
             if not await self._owned(c, job):
                 return False
@@ -293,9 +315,61 @@ class PostgreSQLDocumentStore:
                 raise IngestionError(
                     "invalid_chunks", "Processor source differs from stored version"
                 )
-            original = job.content.decode("utf-8")
+            stored_config = (
+                await c.execute(
+                    select(s.jobs.c.extraction_config).where(s.jobs.c.id == str(job.id))
+                )
+            ).scalar_one()
+            if stored_config != (
+                job.extraction_config.model_dump(mode="json") if job.extraction_config else None
+            ):
+                raise IngestionError(
+                    "invalid_extraction", "Extraction request configuration changed"
+                )
+            if job.extraction_config is not None:
+                if artifact is None:
+                    raise IngestionError(
+                        "invalid_extraction", "Configured extraction artifact is required"
+                    )
+                # model_copy bypasses Pydantic validation; validate a serialized boundary again.
+                try:
+                    artifact = ExtractionArtifact.model_validate(artifact.model_dump())
+                except ValidationError:
+                    raise IngestionError(
+                        "invalid_extraction", "Extraction artifact validation failed"
+                    ) from None
+                if (
+                    artifact.document_id != job.document_id
+                    or artifact.version != job.version
+                    or artifact.source_sha256 != content_hash
+                    or artifact.config != job.extraction_config
+                    or (artifact.parser == "pypdf")
+                    != (job.descriptor.media_type == "application/pdf")
+                ):
+                    raise IngestionError(
+                        "invalid_extraction", "Extraction source provenance disagrees"
+                    )
+                original = artifact.extracted_text
+                if artifact.parser == "utf8" and original != job.content.decode("utf-8"):
+                    raise IngestionError(
+                        "invalid_extraction", "Text extraction differs from source bytes"
+                    )
+            else:
+                if artifact is not None or job.descriptor.media_type == "application/pdf":
+                    raise IngestionError(
+                        "invalid_extraction", "Source requires explicit extraction configuration"
+                    )
+                original = job.content.decode("utf-8")
             position = 0
             for chunk in chunks:
+                if artifact is not None and artifact.parser == "pypdf":
+                    page = next(
+                        (p for p in artifact.pages if p.start <= chunk.start <= p.end), None
+                    )
+                    if page is None or chunk.end > page.end + (
+                        1 if page.number < len(artifact.pages) else 0
+                    ):
+                        raise IngestionError("invalid_chunks", "PDF chunk crosses page boundaries")
                 identity = f"{job.version}:{job.chunking.digest}:{chunk.start}:{chunk.end}"
                 if (
                     chunk.document_id != job.document_id
@@ -314,6 +388,36 @@ class PostgreSQLDocumentStore:
                 position = chunk.end
             if not chunks or position != len(original):
                 raise IngestionError("invalid_chunks", "Processor output omits source content")
+            if artifact is not None:
+                encoded = artifact.model_dump(mode="json", exclude={"processed_at"})
+                fingerprint = hashlib.sha256(
+                    json.dumps(encoded, sort_keys=True).encode()
+                ).hexdigest()
+                existing = (
+                    await c.execute(
+                        select(s.extractions.c.artifact_sha256).where(
+                            s.extractions.c.id == str(artifact.id)
+                        )
+                    )
+                ).scalar_one_or_none()
+                if existing is not None and existing != fingerprint:
+                    raise IngestionError(
+                        "invalid_extraction", "Existing extraction history differs"
+                    )
+                if existing is None:
+                    await c.execute(
+                        insert(s.extractions).values(
+                            id=str(artifact.id),
+                            document_id=str(job.document_id),
+                            version=job.version,
+                            source_sha256=content_hash,
+                            config_sha256=artifact.config.digest,
+                            artifact_sha256=fingerprint,
+                            processed_at=artifact.processed_at,
+                            artifact=artifact.model_dump(mode="json"),
+                            chunk_manifest=[chunk.model_dump(mode="json") for chunk in chunks],
+                        )
+                    )
             await c.execute(
                 delete(s.chunks).where(
                     s.chunks.c.document_id == str(job.document_id),
@@ -322,7 +426,14 @@ class PostgreSQLDocumentStore:
             )
             if chunks:
                 await c.execute(
-                    insert(s.chunks), [chunk.model_dump(mode="json") for chunk in chunks]
+                    insert(s.chunks),
+                    [
+                        {
+                            **chunk.model_dump(mode="json"),
+                            "extraction_id": str(artifact.id) if artifact else None,
+                        }
+                        for chunk in chunks
+                    ],
                 )
             await c.execute(
                 update(s.jobs)
@@ -338,6 +449,21 @@ class PostgreSQLDocumentStore:
             "invalid_chunks",
             "processing_failed",
             "storage_unavailable",
+            "invalid_extraction",
+            "source_too_large",
+            "malformed_pdf",
+            "encrypted_pdf",
+            "page_limit",
+            "ocr_required",
+            "empty_pdf",
+            "text_limit",
+            "parser_resource_limit",
+            "parser_timeout",
+            "parser_revision_mismatch",
+            "unsupported_format",
+            "normalization_limit",
+            "parser_unavailable",
+            "parser_cleanup_failed",
         }
         safe_code = code if code in codes else "processing_failed"
         async with self.transaction() as c:
@@ -387,7 +513,9 @@ class PostgreSQLDocumentStore:
             await c.execute(delete(s.chunks).where(s.chunks.c.document_id == str(document_id)))
             return True
 
-    async def reprocess(self, document_id: UUID) -> UUID:
+    async def reprocess(
+        self, document_id: UUID, extraction_config: ExtractionConfig | None = None
+    ) -> UUID:
         async with self.transaction() as c:
             row = (
                 (
@@ -408,7 +536,19 @@ class PostgreSQLDocumentStore:
                 .where(s.documents.c.id == str(document_id))
                 .values(generation=generation)
             )
-            return await self._enqueue(c, str(document_id), row["version"], generation)
+            if extraction_config is None:
+                previous = (
+                    await c.execute(
+                        select(s.jobs.c.extraction_config).where(
+                            s.jobs.c.document_id == str(document_id),
+                            s.jobs.c.generation == row["generation"],
+                        )
+                    )
+                ).scalar_one_or_none()
+                extraction_config = ExtractionConfig.model_validate(previous) if previous else None
+            return await self._enqueue(
+                c, str(document_id), row["version"], generation, extraction_config
+            )
 
     async def status(self, job_id: UUID) -> dict[str, Any]:
         async with self.transaction() as c:
@@ -426,5 +566,42 @@ class PostgreSQLDocumentStore:
                     "status",
                     "attempts",
                     "error_code",
+                    "extraction_config",
                 )
             }
+
+    async def extraction_history(
+        self, document_id: UUID, active_only: bool = False
+    ) -> list[dict[str, Any]]:
+        async with self.transaction() as c:
+            query = select(s.extractions).where(s.extractions.c.document_id == str(document_id))
+            if active_only:
+                query = (
+                    query.join(s.documents, s.documents.c.id == s.extractions.c.document_id)
+                    .join(
+                        s.jobs,
+                        and_(
+                            s.jobs.c.document_id == s.documents.c.id,
+                            s.jobs.c.generation == s.documents.c.generation,
+                        ),
+                    )
+                    .where(
+                        s.documents.c.deleted.is_(False),
+                        s.documents.c.version == s.extractions.c.version,
+                        s.jobs.c.status == "succeeded",
+                        s.extractions.c.id.in_(
+                            select(s.chunks.c.extraction_id).where(
+                                s.chunks.c.document_id == str(document_id)
+                            )
+                        ),
+                    )
+                )
+            rows = (
+                await c.execute(query.order_by(s.extractions.c.processed_at).limit(11))
+            ).mappings()
+            items = [dict(row) for row in rows]
+            if len(items) > 10 or len(json.dumps(items, default=str)) > 2_000_000:
+                raise IngestionError(
+                    "result_too_large", "Extraction inspection exceeds its safe bound"
+                )
+            return items

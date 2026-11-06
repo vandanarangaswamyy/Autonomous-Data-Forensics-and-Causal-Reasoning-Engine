@@ -306,3 +306,239 @@ async def test_parallel_claims_are_exclusive(store: PostgreSQLDocumentStore) -> 
         assert await store.complete(job, chunks)
     statuses = [await store.status(receipt.job_id) for receipt in receipts]
     assert all(status["attempts"] == 1 for status in statuses)
+
+
+@pytest.fixture
+def pdf_parser() -> None:
+    if os.environ.get("ATLAS_TEST_PDF_PARSER") != "1":
+        pytest.skip("Set ATLAS_TEST_PDF_PARSER=1 after make pdf-parser-build")
+
+
+async def test_pdf_pages_atomic_history_reprocessing_and_deletion(
+    store: PostgreSQLDocumentStore, pdf_parser: None
+) -> None:
+    from atlas_contracts.extraction import ExtractionArtifact, ExtractionConfig
+
+    request = submission(
+        await asyncio.to_thread(Path("evaluation/nlp/source-v1/retail.pdf").read_bytes)
+    )
+    request = request.model_copy(
+        update={
+            "descriptor": request.descriptor.model_copy(update={"media_type": "application/pdf"})
+        }
+    )
+    receipt = await store.submit(request)
+    assert await process_one(store)
+    assert (await store.status(receipt.job_id))["status"] == "succeeded"
+    history = await store.extraction_history(receipt.document_id, active_only=True)
+    assert len(history) == 1
+    artifact = ExtractionArtifact.model_validate(history[0]["artifact"])
+    assert len(artifact.pages) == 2 and "public.orders" in artifact.extracted_text
+    async with store.transaction() as c:
+        before = (await c.execute(select(s.chunks.c.id))).scalars().all()
+        assert before
+        assert all(
+            row == str(artifact.id)
+            for row in (await c.execute(select(s.chunks.c.extraction_id))).scalars()
+        )
+    await store.reprocess(receipt.document_id)
+    assert not await store.extraction_history(receipt.document_id, active_only=True)
+    assert await process_one(store)
+    assert len(await store.extraction_history(receipt.document_id)) == 1
+    # Explicit normalizer upgrade preserves source/version/chunk IDs and retains old artifact.
+    upgraded = await store.reprocess(
+        receipt.document_id, ExtractionConfig(normalization="identity-v1")
+    )
+    assert await process_one(store)
+    assert (await store.status(upgraded))["status"] == "succeeded"
+    assert len(await store.extraction_history(receipt.document_id)) == 2
+    async with store.transaction() as c:
+        assert (await c.execute(select(s.chunks.c.id))).scalars().all() == before
+    await store.delete(receipt.document_id)
+    assert not await store.extraction_history(receipt.document_id, active_only=True)
+    assert len(await store.extraction_history(receipt.document_id)) == 2
+
+
+@pytest.mark.parametrize(
+    "name,code",
+    [
+        ("scanned", "ocr_required"),
+        ("inline-scanned", "ocr_required"),
+        ("encrypted", "encrypted_pdf"),
+        ("malformed", "malformed_pdf"),
+    ],
+)
+async def test_real_pdf_failures_are_structured_and_not_published(
+    store: PostgreSQLDocumentStore, pdf_parser: None, name: str, code: str
+) -> None:
+    request = submission(
+        await asyncio.to_thread(Path(f"evaluation/nlp/source-v1/{name}.pdf").read_bytes)
+    )
+    request = request.model_copy(
+        update={
+            "descriptor": request.descriptor.model_copy(update={"media_type": "application/pdf"})
+        }
+    )
+    receipt = await store.submit(request)
+    assert await process_one(store)
+    status = await store.status(receipt.job_id)
+    assert status["status"] == "failed" and status["error_code"] == code
+    assert "private-parser-error-canary" not in str(status)
+    assert not await store.extraction_history(receipt.document_id)
+
+
+async def test_text_extraction_fencing_and_history_tampering(
+    store: PostgreSQLDocumentStore,
+) -> None:
+    from atlas_contracts.extraction import ExtractionConfig
+    from atlas_documents.extraction import SourceExtractor, segment_artifact
+
+    request = submission(b"A\r\nB")
+    receipt = await store.submit(request)
+    assert await process_one(store)
+    async with store.transaction() as c:
+        before = (await c.execute(select(s.chunks.c.id))).scalars().all()
+    await store.reprocess(receipt.document_id, ExtractionConfig())
+    job = await store.claim()
+    assert job and job.extraction_config
+    artifact = await SourceExtractor().extract(
+        job.document_id, job.version, job.content, job.descriptor.media_type, job.extraction_config
+    )
+    chunks = segment_artifact(artifact, job.chunking)
+    with pytest.raises(IngestionError):
+        await store.complete(job, chunks, artifact.model_copy(update={"source_sha256": "a" * 64}))
+    assert await store.complete(job, chunks, artifact)
+    async with store.transaction() as c:
+        assert (await c.execute(select(s.chunks.c.id))).scalars().all() == before
+    await store.reprocess(receipt.document_id)
+    stale = await store.claim()
+    assert stale
+    await store.delete(receipt.document_id)
+    assert not await store.complete(stale, chunks, artifact)
+    assert len(await store.extraction_history(receipt.document_id)) == 1
+    assert not await store.extraction_history(receipt.document_id, active_only=True)
+
+
+async def test_extraction_publication_rolls_back_on_storage_failure(
+    store: PostgreSQLDocumentStore,
+) -> None:
+    from typing import Any
+
+    from atlas_contracts.extraction import ExtractionConfig
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+
+    receipt = await store.submit(submission(b"A\r\nB"))
+    assert await process_one(store)
+    async with store.transaction() as c:
+        original_ids = (await c.execute(select(s.chunks.c.id))).scalars().all()
+    job_id = await store.reprocess(receipt.document_id, ExtractionConfig())
+    injected = False
+
+    def fail_once(
+        conn: object, cursor: object, statement: str, params: Any, context: object, many: bool
+    ) -> None:
+        nonlocal injected
+        if statement.startswith("INSERT INTO document_chunks") and not injected:
+            injected = True
+            raise OperationalError("redacted", {}, RuntimeError("private-storage-canary"))
+
+    event.listen(store.engine.sync_engine, "before_cursor_execute", fail_once)
+    try:
+        assert await process_one(store)
+    finally:
+        event.remove(store.engine.sync_engine, "before_cursor_execute", fail_once)
+    assert injected
+    status = await store.status(job_id)
+    assert status["status"] == "retry" and status["error_code"] == "storage_unavailable"
+    assert "private-storage-canary" not in str(status)
+    assert not await store.extraction_history(receipt.document_id)
+    async with store.transaction() as c:
+        assert (await c.execute(select(s.chunks.c.id))).scalars().all() == original_ids
+    await expire(store, str(job_id))
+    assert await process_one(store)
+    assert len(await store.extraction_history(receipt.document_id, active_only=True)) == 1
+
+
+async def test_non_destructive_upgrade_preserves_phase31_ids(
+    store: PostgreSQLDocumentStore,
+) -> None:
+    from sqlalchemy import insert
+
+    request = submission()
+    document_id, job_id = str(request.descriptor.document_id), str(uuid4())
+    chunks = segment(
+        decode(request.content),
+        request.descriptor.document_id,
+        1,
+        request.content_sha256,
+        request.chunking,
+    )
+    async with store.engine.begin() as c:
+
+        def downgrade(connection: Connection) -> None:
+            config = configuration()
+            config.attributes["connection"] = connection
+            command.downgrade(config, "knowledge_0001")
+
+        await c.run_sync(downgrade)
+        await c.execute(
+            insert(s.documents).values(
+                id=document_id,
+                collection="retail",
+                source_uri=request.descriptor.source_uri,
+                version=1,
+                generation=1,
+                deleted=False,
+            )
+        )
+        await c.execute(
+            insert(s.blobs).values(sha256=request.content_sha256, content=request.content)
+        )
+        await c.execute(
+            insert(s.versions).values(
+                document_id=document_id,
+                version=1,
+                content_sha256=request.content_sha256,
+                revision_sha256=request.revision_sha256,
+                descriptor=request.descriptor.model_dump(mode="json"),
+                chunking=request.chunking.model_dump(mode="json"),
+                ingested_at=func.now(),
+            )
+        )
+        await c.execute(
+            insert(s.jobs).values(
+                id=job_id,
+                document_id=document_id,
+                version=1,
+                generation=1,
+                status="succeeded",
+                attempts=1,
+                created_at=func.now(),
+                available_at=func.now(),
+            )
+        )
+        await c.execute(insert(s.chunks), [chunk.model_dump(mode="json") for chunk in chunks])
+        await c.run_sync(migrate)
+    async with store.transaction() as c:
+        assert (await c.execute(select(s.chunks.c.id))).scalars().all() == [
+            str(chunk.id) for chunk in chunks
+        ]
+    assert (await store.submit(request)).deduplicated
+    from atlas_contracts.extraction import ExtractionConfig
+
+    await store.reprocess(request.descriptor.document_id, ExtractionConfig())
+    assert await process_one(store)
+    history = await store.extraction_history(request.descriptor.document_id)
+    assert len(history) == 1
+    with pytest.raises(IngestionError):
+        async with store.transaction() as c:
+            await c.execute(update(s.extractions).values(artifact_sha256="a" * 64))
+    with pytest.raises(IngestionError):
+        async with store.transaction() as c:
+            from sqlalchemy import delete
+
+            await c.execute(delete(s.extractions))
+    assert (await store.extraction_history(request.descriptor.document_id))[0][
+        "artifact_sha256"
+    ] == history[0]["artifact_sha256"]

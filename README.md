@@ -69,3 +69,6 @@ requirement coverage and remaining production boundaries.
 Phase 3 milestone 3.1 now provides durable source ingestion and provenance chunks.
 See [setup, verified scope and remaining milestones](docs/phase-3.md). NLP, hybrid
 retrieval and GraphRAG remain subsequent milestones; the full Phase 3 is not complete.
+
+Phase 3.2a adds isolated PDF extraction and mapped normalization with durable artifacts.
+See [verified increment and remaining NLP work](docs/phase-3.2a.md). Phase 3.2 remains partial.

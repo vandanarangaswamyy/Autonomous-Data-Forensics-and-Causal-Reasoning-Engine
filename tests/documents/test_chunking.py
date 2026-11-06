@@ -104,7 +104,7 @@ def test_source_limits_and_unknown_media_fail_closed() -> None:
         submission(b"x" * 1_000_001)
     with pytest.raises(ValidationError):
         SourceDescriptor.model_validate(
-            {**submission().descriptor.model_dump(), "media_type": "application/pdf"}
+            {**submission().descriptor.model_dump(), "media_type": "application/zip"}
         )
     with pytest.raises(ValidationError):
         SourceDescriptor.model_validate(

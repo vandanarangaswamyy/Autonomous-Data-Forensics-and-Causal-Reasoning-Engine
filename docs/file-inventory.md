@@ -1,10 +1,11 @@
 # Source file inventory
 
-Complete source inventory after Phase 3 milestone 3.1.
-Ignored .env, .atlas-private, .atlas-runtime, .venv, caches, builds and Git metadata
+Complete inventory after Phase 3.2a source extraction. Ignored private settings,
+evaluator/runtime directories, environments, caches, build artifacts and Git metadata
 are excluded.
 
 ```text
+.dockerignore
 .env.example
 .gitignore
 .pre-commit-config.yaml
@@ -21,6 +22,7 @@ apps/web/README.md
 docs/architecture.md
 docs/database-mcp.md
 docs/file-inventory.md
+docs/phase-3.2a.md
 docs/phase-3.md
 docs/reviews/database-mcp-audit.md
 docs/simulator-data-model.md
@@ -32,18 +34,30 @@ evaluation/faults/duplicate_transactions.json
 evaluation/faults/incorrect_join.json
 evaluation/faults/missing_partitions.json
 evaluation/faults/schema_drift.json
+evaluation/nlp/source-v1/encrypted.pdf
+evaluation/nlp/source-v1/incident.pdf
+evaluation/nlp/source-v1/inline-scanned.pdf
+evaluation/nlp/source-v1/labels.json
+evaluation/nlp/source-v1/malformed.pdf
+evaluation/nlp/source-v1/retail.pdf
+evaluation/nlp/source-v1/scanned.pdf
+evaluation/nlp/source-v1/table.pdf
 evaluation/results/ingestion-v1.json
+evaluation/results/source-extraction-v1.json
 evaluation/scenarios/a_missing_partitions.json
 evaluation/scenarios/b_incorrect_join.json
 evaluation/scenarios/c_duplicate_events.json
 evaluation/src/atlas_evaluation/__init__.py
 evaluation/src/atlas_evaluation/registry.py
 infrastructure/docker/compose.yaml
+infrastructure/docker/pdf-parser/Dockerfile
 infrastructure/kubernetes/README.md
 knowledge-alembic.ini
 packages/contracts/src/atlas_contracts/__init__.py
 packages/contracts/src/atlas_contracts/analytics.py
 packages/contracts/src/atlas_contracts/documents.py
+packages/contracts/src/atlas_contracts/extraction.py
+packages/contracts/src/atlas_contracts/extraction_config.py
 packages/contracts/src/atlas_contracts/models.py
 packages/contracts/src/atlas_contracts/simulator_events.py
 packages/contracts/src/atlas_contracts/tools.py
@@ -52,11 +66,14 @@ packages/core/src/atlas_core/analytics.py
 packages/core/src/atlas_core/config.py
 packages/core/src/atlas_core/documents.py
 packages/core/src/atlas_core/errors.py
+packages/core/src/atlas_core/extraction.py
 packages/database/README.md
 packages/database/knowledge_migrations/__init__.py
 packages/database/knowledge_migrations/env.py
 packages/database/knowledge_migrations/script.py.mako
 packages/database/knowledge_migrations/versions/0001_sources.py
+packages/database/knowledge_migrations/versions/0002_source_extraction.py
+packages/database/knowledge_migrations/versions/0003_immutable_extraction.py
 packages/database/knowledge_migrations/versions/__init__.py
 packages/database/migrations/env.py
 packages/database/migrations/script.py.mako
@@ -83,6 +100,8 @@ scripts/__init__.py
 scripts/benchmark_ingestion.py
 scripts/bootstrap_knowledge.py
 scripts/bootstrap_simulator.py
+scripts/build_pdf_fixtures.py
+scripts/evaluate_source_extraction.py
 scripts/export_mcp_schemas.py
 scripts/test_documents_integration.py
 scripts/test_simulator_integration.py
@@ -91,6 +110,8 @@ services/documents/README.md
 services/documents/src/atlas_documents/__init__.py
 services/documents/src/atlas_documents/chunking.py
 services/documents/src/atlas_documents/cli.py
+services/documents/src/atlas_documents/extraction.py
+services/documents/src/atlas_documents/pdf_worker.py
 services/documents/src/atlas_documents/settings.py
 services/documents/src/atlas_documents/worker.py
 services/graph_memory/README.md
@@ -125,10 +146,12 @@ tests/contract/README.md
 tests/contract/test_outbox.py
 tests/contract/test_simulator_events.py
 tests/documents/test_chunking.py
+tests/documents/test_extraction.py
 tests/fault_injection/README.md
 tests/integration/README.md
 tests/integration/test_analytics_backend.py
 tests/integration/test_documents.py
+tests/integration/test_pdf_runtime.py
 tests/integration/test_simulator_kafka.py
 tests/integration/test_simulator_postgres.py
 tests/mcp/test_contracts.py

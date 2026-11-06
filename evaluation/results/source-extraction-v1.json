@@ -1,0 +1,58 @@
+{
+  "dataset": "source-v1",
+  "dataset_sha256": "bb56e100382432cc9b36991c4cbc596aab7b2e2f03769bde3e2da07d1fbecf02",
+  "recorded_at": "2026-11-06T01:32:14.070863+00:00",
+  "pdfs": 3,
+  "labeled_pages": 6,
+  "labeled_spans": 6,
+  "unsupported_cases": 4,
+  "page_text_accuracy_whitespace_normalized": 1.0,
+  "source_span_accuracy": 1.0,
+  "unsupported_status_accuracy": 1.0,
+  "extraction_latency_ms_p50": 353.7238328717649,
+  "extraction_latency_ms_max": 375.31229201704264,
+  "details": [
+    {
+      "file": "retail.pdf",
+      "correct_pages": 2,
+      "expected_pages": 2,
+      "actual_pages": 2
+    },
+    {
+      "file": "incident.pdf",
+      "correct_pages": 3,
+      "expected_pages": 3,
+      "actual_pages": 3
+    },
+    {
+      "file": "table.pdf",
+      "correct_pages": 1,
+      "expected_pages": 1,
+      "actual_pages": 1
+    }
+  ],
+  "runtime": {
+    "python": "3.12.12",
+    "platform": "macOS-15.6.1-arm64-arm-64bit",
+    "pypdf": "6.21.4",
+    "parser_image_id": "sha256:daccadaa01d6c3054740bba4193ab707b4c1133a89bed4aad8d32254097c858e",
+    "normalizer": "line-endings-v1",
+    "models": [],
+    "config": {
+      "implementation": "source-extraction-v1",
+      "pdf_parser_revision": "6.21.4",
+      "normalization": "line-endings-v1",
+      "max_pages": 50,
+      "max_chars": 200000,
+      "timeout_seconds": 10
+    }
+  },
+  "unavailable": [
+    "entity precision/recall/F1",
+    "relationship precision/recall/F1",
+    "resolution accuracy",
+    "ambiguity accuracy",
+    "per-entity-type metrics"
+  ],
+  "limitations": "Small authored source-extraction corpus; no NLP/entity extractor or learned model evaluated."
+}

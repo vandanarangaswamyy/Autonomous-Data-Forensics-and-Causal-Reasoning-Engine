@@ -1,8 +1,9 @@
-# Document ingestion
+# Document ingestion and source extraction
 
-Phase 3 milestone 3.1 implements durable PostgreSQL UTF-8 source ingestion, versioning,
-fenced asynchronous jobs and exact-offset recursive/Markdown chunks. Operator CLI:
-`atlas-documents`. See [runbook and milestone limits](../../docs/phase-3.md).
+Phase 3.1 provides durable source ingestion and provenance chunks. Increment 3.2a adds
+bounded PDF extraction, mapped normalization and immutable successful artifacts through
+the same jobs. See [3.2a setup, verification and limits](../../docs/phase-3.2a.md).
 
-PDF, spaCy/Transformers, entities, embeddings and S3 remain deferred. This module does
-not supply hybrid retrieval, an investigation agent or temporal memory.
+Build the isolated parser with make pdf-parser-build. Use atlas-documents for operator
+submission/work/reprocessing and extraction inspection. spaCy/Transformers, technical
+entities, resolution and relationships remain 3.2b; full Phase 3.2 is incomplete.

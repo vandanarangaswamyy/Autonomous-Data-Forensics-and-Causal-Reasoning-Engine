@@ -1,20 +1,20 @@
 # Phase 3: bounded milestones
 
-The authorized Phase 3 scope is divided into independently testable milestones. Only
-3.1 is implemented in this pass. The full NLP/hybrid/GraphRAG phase is **incomplete**.
+The authorized Phase 3 scope is divided into independently testable milestones.
+3.1 and increment 3.2a are implemented. See [3.2a verification and stopping point](phase-3.2a.md). The full NLP/hybrid/GraphRAG phase is **incomplete**.
 There is no autonomous investigator or long-term bitemporal agent memory.
 
 | Milestone | Deliverable | Status |
 |---|---|---|
 | 3.1 | Durable UTF-8 ingestion, source lifecycle, provenance chunks, asynchronous jobs | Implemented and tested |
-| 3.2 | PDF extraction, spaCy/Transformers, technical entities/aliases/relationships/classification, all five chunkers and labeled corpus | Deferred |
+| 3.2 | PDF extraction, spaCy/Transformers, technical entities/aliases/relationships/classification, all five chunkers and labeled corpus | Partial: source extraction/mapping 3.2a verified; NLP 3.2b deferred |
 | 3.3 | Embeddings, VectorStore/pgvector index lifecycle, BM25/dense/RRF/filtering/budgets/reranker, MCP retrieval integration, 50+ labeled query benchmarks | Deferred |
 | 3.4 | Neo4j evidence graph, simulator lineage import, bounded graph retrieval and four-way benchmark ablation | Deferred |
 
 No empty classes, fake embeddings, canned graph results or invented retrieval scores
 stand in for those deferred components. Existing Phase 2 MCP tools remain unchanged.
 
-## Implemented boundary
+## Phase 3.1 baseline boundary (historical)
 
 `atlas_contracts.documents` defines source descriptors, payloads, immutable ingestion
 receipts, leased jobs and chunks. `atlas_core.documents.DocumentStore` is a typed port;

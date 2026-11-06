@@ -16,6 +16,7 @@ from atlas_contracts.documents import (
     SourceDescriptor,
     SourceSubmission,
 )
+from atlas_contracts.extraction import ExtractionConfig
 from atlas_database.documents import PostgreSQLDocumentStore
 from pydantic import ValidationError
 
@@ -40,6 +41,16 @@ def parser() -> argparse.ArgumentParser:
     worker.add_argument("--max-jobs", type=int, default=100)
     for name in ("delete", "reprocess", "status"):
         sub.add_parser(name).add_argument("id", type=UUID)
+    reprocess = sub.choices["reprocess"]
+    reprocess.add_argument(
+        "--extract", action="store_true", help="Produce a versioned text extraction artifact"
+    )
+    reprocess.add_argument(
+        "--normalization", choices=["identity-v1", "line-endings-v1"], default="line-endings-v1"
+    )
+    history = sub.add_parser("extractions")
+    history.add_argument("id", type=UUID)
+    history.add_argument("--active-only", action="store_true")
     return result
 
 
@@ -76,7 +87,20 @@ async def execute(args: argparse.Namespace) -> object:
         if args.command == "delete":
             return {"deleted": await store.delete(args.id)}
         if args.command == "reprocess":
-            return {"job_id": str(await store.reprocess(args.id))}
+            return {
+                "job_id": str(
+                    await store.reprocess(
+                        args.id,
+                        ExtractionConfig(normalization=args.normalization)
+                        if args.extract
+                        else None,
+                    )
+                )
+            }
+        if args.command == "extractions":
+            rows = await store.extraction_history(args.id, active_only=args.active_only)
+            # Inspection returns exact artifact/provenance; this is a trusted operator command.
+            return [{**row, "processed_at": row["processed_at"].isoformat()} for row in rows]
         return await store.status(args.id)
     finally:
         await engine.dispose()
